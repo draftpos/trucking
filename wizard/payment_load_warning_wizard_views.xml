@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_payment_load_warning_wizard" model="ir.ui.view">
+        <field name="name">payment.load.warning.wizard.form</field>
+        <field name="model">payment.load.warning.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Missing Order Number">
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>Warning!</strong> Are you sure you want to continue without an Order Number?
+                    </div>
+                    <field name="payment_id" invisible="1"/>
+                </sheet>
+                <footer>
+                    <button name="action_continue" type="object" string="Yes, Continue" class="btn-primary"/>
+                    <button string="No, Go Back" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Trucking Vehicle -->
+    <record id="view_trucking_vehicle_tree" model="ir.ui.view">
+        <field name="name">trucking.vehicle.tree</field>
+        <field name="model">trucking.vehicle</field>
+        <field name="arch" type="xml">
+            <list string="Trucks">
+                <field name="reg_number"/>
+                <field name="make"/>
+                <field name="model"/>
+                <field name="partner_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_trucking_vehicle_form" model="ir.ui.view">
+        <field name="name">trucking.vehicle.form</field>
+        <field name="model">trucking.vehicle</field>
+        <field name="arch" type="xml">
+            <form string="Truck">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="reg_number" placeholder="Registration Number"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="make"/>
+                            <field name="model"/>
+                        </group>
+                        <group>
+                            <field name="partner_id" context="{'res_partner_search_mode': 'supplier'}"/>
+                            <field name="trailer_1_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}"/>
+                            <field name="trailer_2_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_trucking_vehicle" model="ir.actions.act_window">
+        <field name="name">Trucks</field>
+        <field name="res_model">trucking.vehicle</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

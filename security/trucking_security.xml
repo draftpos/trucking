@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="module_category_trucking" model="ir.module.category">
+        <field name="name">Trucking</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <record id="res_groups_privilege_trucking" model="res.groups.privilege">
+        <field name="name">Trucking Roles</field>
+        <field name="category_id" ref="module_category_trucking"/>
+    </record>
+
+    <record id="group_trucking_user" model="res.groups">
+        <field name="name">User</field>
+        <field name="privilege_id" ref="res_groups_privilege_trucking"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <record id="group_trucking_manager" model="res.groups">
+        <field name="name">Manager</field>
+        <field name="privilege_id" ref="res_groups_privilege_trucking"/>
+        <field name="implied_ids" eval="[(4, ref('group_trucking_user'))]"/>
+    </record>
+
+    <record id="group_trucking_fuel_approver" model="res.groups">
+        <field name="name">Trucking Fuel Approver</field>
+        <field name="privilege_id" ref="res_groups_privilege_trucking"/>
+    </record>
+
+    <record id="group_trucking_deposit_approver" model="res.groups">
+        <field name="name">Trucking Deposit Approver</field>
+        <field name="privilege_id" ref="res_groups_privilege_trucking"/>
+    </record>
+</odoo>

@@ -1,0 +1,31 @@
+{
+    "name": "Trucking",
+    "version": "1.0",
+    "category": "Logistics",
+    "summary": "Manage Trucking loads, transporters, customers, and billing",
+    "author": "Havano",
+    "depends": ["base", "web", "sale_management", "purchase", "account", "havano_all_in_one"],
+    "data": [
+        "security/trucking_security.xml",
+        "security/ir.model.access.csv",
+        "data/trucking_data.xml",
+        "views/trucking_trailer_views.xml",
+        "views/trucking_vehicle_views.xml",
+        "views/trucking_route_views.xml",
+        "views/trucking_load_views.xml",
+        "views/trucking_menus.xml",
+        "views/account_payment_views.xml",
+        "wizard/trucking_reject_wizard_views.xml",
+        "wizard/payment_load_warning_wizard_views.xml",
+        "wizard/trucking_zero_confirm_wizard_views.xml",
+    ],
+    "assets": {
+        "web.assets_backend": [
+            "trucking/static/src/js/trucking_dashboard.js",
+            "trucking/static/src/xml/trucking_dashboard.xml",
+            "trucking/static/src/scss/trucking_dashboard.scss",
+        ],
+    },
+    "installable": True,
+    "application": True,
+}

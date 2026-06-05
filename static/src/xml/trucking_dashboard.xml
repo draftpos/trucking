@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="trucking.TruckingDashboard" owl="1">
+        <div class="o_action_manager" style="overflow-y: auto; height: 100%;">
+            <div class="container-fluid py-4" style="background-color: #f4f6f9; min-height: 100vh; overflow-x: hidden;">
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="/web/binary/company_logo" alt="Company Logo" class="bg-white shadow-sm" style="height: 55px; max-width: 140px; object-fit: contain; border-radius: 12px; padding: 6px; border: 1px solid #eef2f5; transition: transform 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"/>
+                        <div>
+                            <h2 class="mb-1" style="color: #2b3674; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Trucking Dashboard</h2>
+                            <div class="text-muted" style="font-size: 15px; font-weight: 500; letter-spacing: 0.2px;">Loads overview &amp; summary</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="position-relative">
+                            <button class="btn btn-warning rounded-circle shadow-sm d-flex align-items-center justify-content-center border-0 p-0" 
+                                    style="width: 45px; height: 45px; cursor: pointer;" 
+                                    t-on-click="togglePendingModal">
+                                <i t-attf-class="fa fa-bell fs-5 text-white #{state.approvals_list.length > 0 ? 'shake-animation' : ''}"></i>
+                                <span t-if="state.approvals_list.length > 0" 
+                                      t-attf-class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger #{state.approvals_list.length > 0 ? 'pulse-animation' : ''}"
+                                      style="font-size: 11px; z-index: 2;">
+                                    <t t-esc="state.approvals_list.length"/>
+                                </span>
+                            </button>
+                            
+                            <div t-if="state.showPendingModal" class="position-absolute shadow-lg rounded-3 bg-white border mt-2" 
+                                 style="width: 320px; right: 0; z-index: 1050; max-height: 400px; overflow-y: auto;">
+                                <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light sticky-top">
+                                    <h6 class="mb-0 fw-bold">Pending Actions</h6>
+                                    <button class="btn-close btn-sm" t-on-click="togglePendingModal"></button>
+                                </div>
+                                <div class="p-0">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item text-center py-4 text-muted border-0" t-if="state.approvals_list.length === 0">
+                                            <i class="fa fa-thumbs-o-up fs-2 text-primary opacity-50 mb-2 d-block"></i>
+                                            No pending actions!
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center p-3 border-bottom" t-foreach="state.approvals_list" t-as="app" t-key="app.id" style="cursor:pointer;" t-on-click="() => { this.togglePendingModal(); this.openLoadForm(app.id); }">
+                                            <div class="d-flex flex-column" style="max-width: 85%;">
+                                                <span class="fw-bold text-dark mb-1 text-truncate" style="font-size: 13px;"><t t-esc="app.name"/> - <t t-esc="app.customer"/></span>
+                                                <span t-attf-class="badge #{app.state === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'} px-2 py-1" style="font-size: 10px; width: fit-content; font-weight: 600;">
+                                                    <t t-esc="app.status_text"/>
+                                                </span>
+                                            </div>
+                                            <i class="fa fa-chevron-right text-muted" style="font-size: 10px;"></i>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <select class="form-select bg-white border-0 shadow-sm rounded-pill px-4" style="width: 150px; cursor: pointer;" t-on-change="onDateFilterChange" t-att-value="state.dateFilter">
+                            <option value="all">All Time</option>
+                            <option value="year">This Year</option>
+                            <option value="month">This Month</option>
+                            <option value="week">This Week</option>
+                        </select>
+                        <button class="btn bg-white shadow-sm border-0 rounded-pill" style="color: #0d6efd; font-weight: 500;" t-on-click="fetchData">
+                            <i class="fa fa-refresh me-2"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <style>
+                    .delivery-day:hover .hover-modal {
+                        display: block !important;
+                    }
+                    .dashboard-card {
+                        transition: all 0.3s ease;
+                        border-radius: 12px !important;
+                        border: 1px solid #eef2f5 !important;
+                    }
+                    .dashboard-card:hover {
+                        transform: translateY(-3px);
+                        box-shadow: 0 8px 15px rgba(0,0,0,0.05) !important;
+                    }
+                    .icon-square {
+                        width: 45px;
+                        height: 45px;
+                        border-radius: 10px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                    }
+                    .metric-title {
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #2b3674;
+                        letter-spacing: 0.5px;
+                    }
+                    .metric-value {
+                        font-size: 26px;
+                        font-weight: 800;
+                        color: #2b3674;
+                        margin-bottom: 2px;
+                    }
+                    
+                    @keyframes shake {
+                        0% { transform: rotate(0deg); }
+                        25% { transform: rotate(15deg); }
+                        50% { transform: rotate(0deg); }
+                        75% { transform: rotate(-15deg); }
+                        100% { transform: rotate(0deg); }
+                    }
+                    .shake-animation {
+                        animation: shake 1s ease-in-out infinite;
+                        display: inline-block;
+                        transform-origin: top center;
+                    }
+
+                    @keyframes pulse {
+                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+                        50% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+                    }
+                    .pulse-animation {
+                        animation: pulse 2s infinite;
+                    }
+                </style>
+                <div class="row mb-4">
+                    <!-- Total Delivered -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="cursor: pointer; border-left: 4px solid #20c997 !important;" t-on-click="() => this.openLoads([['state', '=', 'delivered']], 'Delivered Loads')">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value" t-esc="state.metrics.total_delivered"/>
+                                    <span class="text-uppercase metric-title">Loads Delivered</span>
+                                </div>
+                                <div class="icon-square shadow-sm" style="background-color: #20c997;">
+                                    <i class="fa fa-truck fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- In Progress -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="cursor: pointer; border-left: 4px solid #f6a624 !important;" t-on-click="() => this.openLoads([['state', 'in', ['in_progress', 'overdue']]], 'In Progress')">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value" t-esc="state.metrics.in_progress"/>
+                                    <span class="text-uppercase metric-title">In Progress</span>
+                                </div>
+                                <div class="icon-square shadow-sm" style="background-color: #f6a624;">
+                                    <i class="fa fa-spinner fa-spin fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Invoices -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="cursor: pointer; border-left: 4px solid #7258fa !important;" t-on-click="() => this.openLoads([['state', '=', 'invoiced']], 'Invoiced Loads')">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value" t-esc="state.metrics.total_invoices"/>
+                                    <span class="text-uppercase metric-title">Invoices Done</span>
+                                </div>
+                                <div class="icon-square shadow-sm" style="background-color: #7258fa;">
+                                    <i class="fa fa-file-text fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gross Profit -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="border-left: 4px solid #1bb786 !important;">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value">
+                                        $<t t-esc="state.metrics.gross_profit.toFixed(2)"/>
+                                    </h2>
+                                    <span class="text-uppercase metric-title">Gross Profit</span>
+                                </div>
+                                <div class="icon-square shadow-sm" style="background-color: #1bb786;">
+                                    <i class="fa fa-money fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Load Value -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="border-left: 4px solid #0d6efd !important;">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value">
+                                        $<t t-esc="state.metrics.total_load_value.toFixed(2)"/>
+                                    </h2>
+                                    <span class="text-uppercase metric-title">Total Load Value</span>
+                                </div>
+                                <div class="icon-square shadow-sm" style="background-color: #0d6efd;">
+                                    <i class="fa fa-briefcase fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Over Due PODs -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="cursor: pointer; border-left: 4px solid #dc3545 !important;" t-on-click="() => this.openLoads([['state', '=', 'overdue']], 'Over Due PODs')">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value text-danger" t-esc="state.metrics.overdue_loads"/>
+                                    <span class="text-uppercase metric-title">Over Due PODs</span>
+                                </div>
+                                <div class="icon-square shadow-sm bg-danger">
+                                    <i class="fa fa-exclamation-triangle fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivered on Time -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="cursor: pointer; border-left: 4px solid #198754 !important;" t-on-click="() => this.openLoads([['state', 'in', ['delivered', 'invoiced']], ['delivery_date', '&lt;=', 'expected_delivery_date']], 'Delivered On Time')">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value text-success" t-esc="state.metrics.delivered_on_time"/>
+                                    <span class="text-uppercase metric-title">On Time Deliveries</span>
+                                </div>
+                                <div class="icon-square shadow-sm bg-success">
+                                    <i class="fa fa-check-circle fs-5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delayed Deliveries -->
+                    <div class="col-md-3 mb-4">
+                        <div class="card shadow-sm bg-white dashboard-card" style="cursor: pointer; border-left: 4px solid #ffc107 !important;" t-on-click="() => this.openLoads([['state', 'in', ['delivered', 'invoiced']], ['delivery_date', '&gt;', 'expected_delivery_date']], 'Delayed Deliveries')">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="metric-value text-warning" t-esc="state.metrics.delayed_deliveries"/>
+                                    <span class="text-uppercase metric-title">Delayed Deliveries</span>
+                                </div>
+                                <div class="icon-square shadow-sm bg-warning">
+                                    <i class="fa fa-clock-o fs-5 text-white"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row mb-4">
+                    <div class="col-md-5">
+                        <div class="card border-0 h-100" style="border-radius: 24px; box-shadow: 0 12px 35px rgba(0,0,0,0.05) !important; transition: all 0.3s ease;">
+                            <div class="card-header bg-white border-0 py-4 px-4" style="border-radius: 24px 24px 0 0;">
+                                <h5 class="mb-0 fw-bold" style="font-size: 17px; color: #0d6efd; letter-spacing: 0.5px;">
+                                    <i class="fa fa-line-chart me-2"></i> Profitability &amp; Revenue
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div style="position: relative; height: 300px; width: 100%;">
+                                    <canvas t-ref="lineChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 h-100" style="border-radius: 24px; box-shadow: 0 12px 35px rgba(0,0,0,0.05) !important; transition: all 0.3s ease;">
+                            <div class="card-header bg-white border-0 py-4 px-4" style="border-radius: 24px 24px 0 0;">
+                                <h5 class="mb-0 fw-bold" style="font-size: 17px; color: #2b3674; letter-spacing: 0.5px;">
+                                    <i class="fa fa-pie-chart me-2 text-success"></i> Load Status
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div style="position: relative; height: 300px; width: 100%;">
+                                    <canvas t-ref="donutChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 h-100" style="border-radius: 24px; box-shadow: 0 12px 35px rgba(0,0,0,0.05) !important; transition: all 0.3s ease;">
+                            <div class="card-header bg-white border-0 py-4 px-4 d-flex align-items-center justify-content-between" style="border-radius: 24px 24px 0 0;">
+                                <h5 class="mb-0 fw-bold" style="font-size: 17px; color: #2b3674; letter-spacing: 0.5px;">
+                                    <i class="fa fa-calendar me-2 text-info"></i> Upcoming Delivery
+                                </h5>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-light rounded-circle shadow-sm border" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;" t-on-click="prevDelivery" t-att-disabled="state.calendarIndex === 0">
+                                        <i class="fa fa-chevron-left" style="font-size: 10px;"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-light rounded-circle shadow-sm border" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;" t-on-click="nextDelivery" t-att-disabled="!state.upcoming_deliveries || state.calendarIndex === state.upcoming_deliveries.length - 1">
+                                        <i class="fa fa-chevron-right" style="font-size: 10px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-3 d-flex flex-column justify-content-center">
+                                <t t-if="state.calendarDelivery">
+                                    <div class="text-center fw-bold mb-3" style="font-size: 16px; color: #2b3674;">
+                                        <t t-esc="state.calendarMonthYear"/>
+                                    </div>
+                                    <div class="d-flex flex-wrap text-center mb-2" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">
+                                        <div style="width: 14.28%;">Su</div>
+                                        <div style="width: 14.28%;">Mo</div>
+                                        <div style="width: 14.28%;">Tu</div>
+                                        <div style="width: 14.28%;">We</div>
+                                        <div style="width: 14.28%;">Th</div>
+                                        <div style="width: 14.28%;">Fr</div>
+                                        <div style="width: 14.28%;">Sa</div>
+                                    </div>
+                                    <div class="d-flex flex-wrap text-center mb-3">
+                                        <t t-foreach="state.calendarDays" t-as="dayObj" t-key="dayObj.id">
+                                            <div style="width: 14.28%; height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px;">
+                                                <t t-if="!dayObj.empty">
+                                                    <div t-attf-class="position-relative #{dayObj.isDelivery ? 'text-white rounded-circle shadow-sm delivery-day' : 'text-dark'}" 
+                                                         t-attf-style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; cursor: default; #{dayObj.isDelivery ? 'background-color: #0d6efd !important;' : ''}">
+                                                        <t t-esc="dayObj.day"/>
+                                                        <t t-if="dayObj.isDelivery">
+                                                            <div class="hover-modal position-absolute shadow rounded bg-white p-2 border text-start" style="display: none; z-index: 1050; width: 160px; bottom: 120%; left: 50%; transform: translateX(-50%);">
+                                                                <div class="fw-bold text-primary text-truncate"><t t-esc="state.calendarDelivery.name"/></div>
+                                                                <div class="text-dark text-truncate" style="font-size: 11px; font-weight: normal;"><t t-esc="state.calendarDelivery.customer"/></div>
+                                                                <div class="text-success mt-1" style="font-size: 11px;">Due in <t t-esc="state.calendarDelivery.days_left"/> Days</div>
+                                                            </div>
+                                                        </t>
+                                                    </div>
+                                                </t>
+                                            </div>
+                                        </t>
+                                    </div>
+                                    <div class="mt-auto p-3 rounded-3 text-center shadow-sm dashboard-card" style="cursor: pointer; background-color: #ffffff; border: 1px solid #eef2f5; border-left: 4px solid #0d6efd !important;" t-on-click="() => this.openLoadForm(state.calendarDelivery.id)">
+                                        <h6 class="fw-bold mb-1" style="color: #2b3674; font-size: 15px; letter-spacing: 0.5px;"><t t-esc="state.calendarDelivery.name"/></h6>
+                                        <div class="text-muted text-truncate mb-2" style="font-size: 13px; font-weight: 500;"><t t-esc="state.calendarDelivery.customer"/></div>
+                                        <span class="badge px-3 py-2 rounded-pill shadow-sm text-white" style="background-color: #0d6efd; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;">Due in <t t-esc="state.calendarDelivery.days_left"/> Days</span>
+                                    </div>
+                                </t>
+                                <t t-else="">
+                                    <div class="text-center text-muted py-5 my-auto">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                                            <i class="fa fa-calendar-check-o fs-2 opacity-50"></i>
+                                        </div>
+                                        <div class="fw-semibold">No upcoming deliveries</div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <!-- Overdue Loads Table -->
+                    <div class="col-md-8 mb-4">
+                        <div class="card border-0 h-100" style="border-radius: 24px; box-shadow: 0 12px 35px rgba(0,0,0,0.05) !important; transition: all 0.3s ease;">
+                            <div class="card-header bg-white border-0 py-4 px-4 d-flex align-items-center justify-content-between border-bottom" style="border-radius: 24px 24px 0 0;">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                        <i class="fa fa-exclamation-triangle fs-5 text-white"></i>
+                                    </div>
+                                    <h5 class="mb-0 fw-bold" style="font-size: 17px; color: #2b3674; letter-spacing: 0.5px;">Over Due PODs</h5>
+                                </div>
+                                <span class="badge bg-danger rounded-pill px-3 py-2" style="font-size: 13px;" t-esc="state.metrics.overdue_loads"/>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead style="background-color: #f8f9fa; border-bottom: 2px solid #edf2f7;">
+                                            <tr>
+                                                <th class="border-top-0 text-uppercase px-4 py-3" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">Load #</th>
+                                                <th class="border-top-0 text-uppercase py-3" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">Customer</th>
+                                                <th class="border-top-0 text-uppercase py-3" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">Transporter</th>
+                                                <th class="border-top-0 text-uppercase py-3" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">Expected</th>
+                                                <th class="border-top-0 text-uppercase py-3 text-center" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">Status</th>
+                                                <th class="border-top-0 text-uppercase px-4 py-3 text-end" style="font-size: 12px; font-weight: 700; color: #2b3674; letter-spacing: 1px;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-if="state.overdue_list.length === 0">
+                                                <td colspan="6" class="text-center py-5 text-muted">
+                                                    <i class="fa fa-check-circle-o fs-1 text-success opacity-50 mb-3 d-block"></i>
+                                                    No over due PODs! You are all caught up.
+                                                </td>
+                                            </tr>
+                                            <tr t-foreach="state.overdue_list" t-as="load" t-key="load.id" style="transition: background-color 0.2s;">
+                                                <td class="px-4 py-3 fw-bold" style="color: #0d6efd;"><t t-esc="load.name"/></td>
+                                                <td class="py-3 text-dark fw-semibold"><t t-esc="load.customer"/></td>
+                                                <td class="py-3 text-muted"><t t-esc="load.transporter"/></td>
+                                                <td class="py-3 text-danger fw-semibold"><i class="fa fa-calendar me-1"></i><t t-esc="load.expected_delivery_date"/></td>
+                                                <td class="py-3 text-center">
+                                                    <span class="badge bg-danger text-white shadow-sm" style="border-radius: 6px; padding: 6px 12px; font-weight: 600; letter-spacing: 0.5px;">Overdue</span>
+                                                </td>
+                                                <td class="px-4 py-3 text-end">
+                                                    <button class="btn btn-sm btn-light rounded-pill px-3 shadow-sm" style="color: #0d6efd;" t-on-click="() => this.openLoadForm(load.id)">
+                                                        View <i class="fa fa-arrow-right ms-1" style="font-size: 10px;"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Approvals List -->
+                    <div class="col-md-4 mb-4">
+                        <div class="card border-0 h-100" style="border-radius: 24px; box-shadow: 0 12px 35px rgba(0,0,0,0.05) !important; transition: all 0.3s ease;">
+                            <div class="card-header bg-white border-0 py-4 px-4 d-flex align-items-center justify-content-between border-bottom" style="border-radius: 24px 24px 0 0;">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                        <i t-attf-class="fa fa-bell fs-5 text-white #{state.approvals_list.length > 0 ? 'shake-animation' : ''}"></i>
+                                    </div>
+                                    <h5 class="mb-0 fw-bold" style="font-size: 17px; color: #2b3674; letter-spacing: 0.5px;">Pending Actions</h5>
+                                </div>
+                                <span t-attf-class="badge bg-warning text-dark rounded-pill px-3 py-2 #{state.approvals_list.length > 0 ? 'pulse-animation' : ''}" style="font-size: 13px; font-weight: 600;" t-esc="state.approvals_list.length"/>
+                            </div>
+                            <div class="card-body p-0" style="max-height: 450px; overflow-y: auto;">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item text-center py-5 text-muted border-0" t-if="state.approvals_list.length === 0">
+                                        <i class="fa fa-thumbs-o-up fs-1 text-primary opacity-50 mb-3 d-block"></i>
+                                        No pending actions requiring your attention.
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom" t-foreach="state.approvals_list" t-as="app" t-key="app.id" style="transition: background-color 0.2s;">
+                                        <div class="d-flex align-items-center" style="max-width: 80%;">
+                                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 40px; height: 40px; flex-shrink: 0;">
+                                                <i class="fa fa-file-text-o" style="color: #0d6efd;"></i>
+                                            </div>
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-bold text-dark mb-1 text-truncate" style="font-size: 14px;"><t t-esc="app.name"/> - <t t-esc="app.customer"/></span>
+                                                <span t-attf-class="badge #{app.state === 'rejected' ? 'bg-danger' : 'bg-warning text-dark'} shadow-sm px-2 py-1 mt-1" style="font-size: 11px; width: fit-content; border-radius: 4px; font-weight: 600; letter-spacing: 0.3px;">
+                                                    <i class="fa fa-info-circle me-1"></i> <t t-esc="app.status_text"/>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-white rounded-circle shadow-sm border d-flex align-items-center justify-content-center" style="color: #0d6efd; width: 35px; height: 35px; flex-shrink: 0;" t-on-click="() => this.openLoadForm(app.id)" title="Review Request">
+                                            <i class="fa fa-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+            </div>
+        </div>
+    </t>
+</templates>
