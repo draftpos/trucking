@@ -4,3 +4,6 @@ access_trucking_vehicle,trucking.vehicle,model_trucking_vehicle,base.group_user,
 access_trucking_route,trucking.route,model_trucking_route,base.group_user,1,1,1,1
 access_trucking_reject_wizard,trucking.reject.wizard,model_trucking_reject_wizard,base.group_user,1,1,1,1
 access_trucking_trailer,trucking.trailer,model_trucking_trailer,base.group_user,1,1,1,1
+access_trucking_border,trucking.border,model_trucking_border,base.group_user,1,1,1,1
+access_trucking_route_border,trucking.route.border,model_trucking_route_border,base.group_user,1,1,1,1
+access_trucking_load_border,trucking.load.border,model_trucking_load_border,base.group_user,1,1,1,1

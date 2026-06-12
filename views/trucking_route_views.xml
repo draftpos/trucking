@@ -6,9 +6,41 @@
         <field name="model">trucking.route</field>
         <field name="arch" type="xml">
             <list string="Routes" editable="bottom">
-                <field name="name"/>
+                <field name="source"/>
+                <field name="destination"/>
+                <field name="name" readonly="1"/>
                 <field name="distance"/>
             </list>
+        </field>
+    </record>
+
+    <record id="view_trucking_route_form" model="ir.ui.view">
+        <field name="name">trucking.route.form</field>
+        <field name="model">trucking.route</field>
+        <field name="arch" type="xml">
+            <form string="Route">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="source"/>
+                            <field name="destination"/>
+                            <field name="name" readonly="1"/>
+                            <field name="distance"/>
+                            <field name="is_cross_border"/>
+                        </group>
+                    </group>
+                    <notebook invisible="not is_cross_border">
+                        <page string="Borders" name="borders">
+                            <field name="border_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="border_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
         </field>
     </record>
 

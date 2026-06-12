@@ -43,90 +43,116 @@
                     </div>
                     <widget name="web_ribbon" title="DELAYED LOADING" bg_color="text-bg-danger" invisible="not is_delayed_loading"/>
 
-                    
-                    <div class="row mt-3">
-                        <!-- Loading Details -->
-                        <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px;">
-                            <h4 class="text-primary mb-3">Loading Details</h4>
-                            <group>
-                                <field name="is_delayed_loading" invisible="1"/>
-                                <field name="booking_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="expected_loading_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="date_loaded" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="expected_delivery_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="transporter_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True, 'default_is_customer': False, 'res_partner_search_mode': 'supplier'}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="vehicle_id" required="state != 'draft'" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_vehicle_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="trailer_1_id" required="state != 'draft'" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="trailer_2_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="qty_tonnes" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="rate_per_tonne" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="total_per_load" widget="monetary"/>
-                                <field name="route_id" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="product_id" readonly="1" force_save="1"/>
-                                <field name="currency_id" invisible="1"/>
-                                <field name="company_id" invisible="1"/>
-                            </group>
-                        </div>
-                        
-                        <!-- Payment Details -->
-                        <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
-                            <h4 class="text-primary mb-3">Payment Details</h4>
-                            <group>
-                                <field name="deposit_amount" widget="monetary" readonly="deposit_approval_state in ('requested', 'approved')"/>
-                                <field name="deposit_approval_state" widget="badge" decoration-info="deposit_approval_state == 'requested'" decoration-success="deposit_approval_state == 'approved'" decoration-danger="deposit_approval_state == 'rejected'" invisible="deposit_approval_state == 'none'"/>
-                                <field name="deposit_reject_reason" invisible="deposit_approval_state != 'rejected'"/>
-                                <field name="deposit_payment_id" invisible="not deposit_payment_id"/>
+                    <notebook>
+                        <page string="Load" name="load">
+                            <div class="row mt-3">
+                                <!-- Loading Details -->
+                                <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px;">
+                                    <h4 class="text-primary mb-3">Loading Details</h4>
+                                    <group>
+                                        <field name="is_delayed_loading" invisible="1"/>
+                                        <field name="booking_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="expected_loading_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="date_loaded" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="expected_delivery_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="transporter_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True, 'default_is_customer': False, 'res_partner_search_mode': 'supplier'}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="vehicle_id" required="state != 'draft'" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_vehicle_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="trailer_1_id" required="state != 'draft'" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="trailer_2_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="qty_tonnes" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="rate_per_tonne" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="total_per_load" widget="monetary"/>
+                                        <field name="product_id" readonly="1" force_save="1"/>
+                                        <field name="currency_id" invisible="1"/>
+                                        <field name="company_id" invisible="1"/>
+                                    </group>
+                                </div>
                                 
-                                <field name="fuel_litres" readonly="fuel_approval_state in ('requested', 'approved')"/>
-                                <field name="fuel_unit_price" readonly="fuel_approval_state in ('requested', 'approved')"/>
-                                <field name="fuel_amount" widget="monetary"/>
-                                <field name="fuel_approval_state" widget="badge" decoration-info="fuel_approval_state == 'requested'" decoration-success="fuel_approval_state == 'approved'" decoration-danger="fuel_approval_state == 'rejected'" invisible="fuel_approval_state == 'none'"/>
-                                <field name="fuel_reject_reason" invisible="fuel_approval_state != 'rejected'"/>
-                                <field name="fuel_payment_id" invisible="not fuel_payment_id"/>
+                                <!-- Payment Details -->
+                                <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
+                                    <h4 class="text-primary mb-3">Payment Details</h4>
+                                    <group>
+                                        <field name="deposit_amount" widget="monetary" readonly="deposit_approval_state in ('requested', 'approved')"/>
+                                        <field name="deposit_approval_state" widget="badge" decoration-info="deposit_approval_state == 'requested'" decoration-success="deposit_approval_state == 'approved'" decoration-danger="deposit_approval_state == 'rejected'" invisible="deposit_approval_state == 'none'"/>
+                                        <field name="deposit_reject_reason" invisible="deposit_approval_state != 'rejected'"/>
+                                        <field name="deposit_payment_id" invisible="not deposit_payment_id"/>
+                                        
+                                        <field name="fuel_litres" readonly="fuel_approval_state in ('requested', 'approved')"/>
+                                        <field name="fuel_unit_price" readonly="fuel_approval_state in ('requested', 'approved')"/>
+                                        <field name="fuel_amount" widget="monetary"/>
+                                        <field name="fuel_approval_state" widget="badge" decoration-info="fuel_approval_state == 'requested'" decoration-success="fuel_approval_state == 'approved'" decoration-danger="fuel_approval_state == 'rejected'" invisible="fuel_approval_state == 'none'"/>
+                                        <field name="fuel_reject_reason" invisible="fuel_approval_state != 'rejected'"/>
+                                        <field name="fuel_payment_id" invisible="not fuel_payment_id"/>
 
-                                <field name="balance" widget="monetary"/>
-                                <field name="journal_id" required="state == 'pending_approval'"/>
-                            </group>
-                        </div>
-                        
-                        <!-- Delivery Info -->
-                        <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
-                            <h4 class="text-primary mb-3">Delivery Info</h4>
+                                        <field name="balance" widget="monetary"/>
+                                        <field name="journal_id" required="state == 'pending_approval'"/>
+                                    </group>
+                                </div>
+                                
+                                <!-- Delivery Info -->
+                                <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
+                                    <h4 class="text-primary mb-3">Delivery Info</h4>
+                                    <group>
+                                        <field name="delivery_date"/>
+                                        <field name="pod"/>
+                                        <field name="delivered_qty"/>
+                                        <field name="variance_qty"/>
+                                        <field name="variance_value" widget="monetary"/>
+                                        <field name="shortages" widget="monetary"/>
+                                        <field name="transporter_balance" widget="monetary" style="font-weight: bold;"/>
+                                        <field name="transporter_bill_id"/>
+                                    </group>
+                                </div>
+                                
+                                <!-- Customer Recovery Details -->
+                                <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
+                                    <h4 class="text-primary mb-3">Customer Recovery Details</h4>
+                                    <group>
+                                        <field name="invoice_id"/>
+                                        <field name="invoiced_amount" widget="monetary"/>
+                                        <field name="paid" widget="monetary"/>
+                                        <field name="customer_rate" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                        <field name="customer_balance" widget="monetary"/>
+                                        <field name="gross_profit" widget="monetary" style="font-weight: bold;"/>
+                                    </group>
+                                </div>
+                            </div>
+
+                            <!-- Billing Policy -->
+                            <div class="mt-4 p-3 bg-light" style="border-radius: 5px;">
+                                <h4 class="text-info">Billing Policy</h4>
+                                <group col="4">
+                                    <field name="bill_customer_qty" widget="radio" options="{'horizontal': true}"/>
+                                    <field name="bill_transporter_qty" widget="radio" options="{'horizontal': true}"/>
+                                </group>
+                            </div>
+                        </page>
+                        <page string="Route &amp; Borders" name="route_borders">
                             <group>
-                                <field name="delivery_date"/>
-                                <field name="pod"/>
-                                <field name="delivered_qty"/>
-                                <field name="variance_qty"/>
-                                <field name="variance_value" widget="monetary"/>
-                                <field name="shortages" widget="monetary"/>
-                                <field name="transporter_balance" widget="monetary" style="font-weight: bold;"/>
-                                <field name="transporter_bill_id"/>
+                                <group>
+                                    <field name="route_id" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                    <field name="is_cross_border_route" invisible="1"/>
+                                </group>
                             </group>
-                        </div>
-                        
-                        <!-- Customer Recovery Details -->
-                        <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
-                            <h4 class="text-primary mb-3">Customer Recovery Details</h4>
-                            <group>
-                                <field name="invoice_id"/>
-                                <field name="invoiced_amount" widget="monetary"/>
-                                <field name="paid" widget="monetary"/>
-                                <field name="customer_rate" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
-                                <field name="customer_balance" widget="monetary"/>
-                                <field name="gross_profit" widget="monetary" style="font-weight: bold;"/>
-                            </group>
-                        </div>
-                    </div>
-                    
-                    <!-- Billing Policy -->
-                    <div class="mt-4 p-3 bg-light" style="border-radius: 5px;">
-                        <h4 class="text-info">Billing Policy</h4>
-                        <group col="4">
-                            <field name="bill_customer_qty" widget="radio" options="{'horizontal': true}"/>
-                            <field name="bill_transporter_qty" widget="radio" options="{'horizontal': true}"/>
-                        </group>
-                    </div>
+                            <field name="border_tracking_ids" invisible="not is_cross_border_route" mode="list">
+                                <list editable="bottom" default_order="sequence">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="border_id"/>
+                                    <field name="eta"/>
+                                    <field name="ata"/>
+                                    <field name="arrival_status" decoration-danger="'Delayed' in arrival_status" decoration-success="'On Time' in arrival_status"/>
+                                    <field name="etd"/>
+                                    <field name="atd"/>
+                                    <field name="departure_status" decoration-danger="'Delayed' in departure_status" decoration-success="'On Time' in departure_status"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Tracking" name="tracking" invisible="not is_cross_border_route">
+                            <field name="tracking_progress_html" widget="html" readonly="1" nolabel="1"/>
+                        </page>
+                    </notebook>
+
 
                 </sheet>
             </form>

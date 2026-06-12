@@ -55,6 +55,10 @@ class TruckingLoad(models.Model):
     rate_per_tonne = fields.Monetary(string='Rate per Tonne', currency_field='currency_id', required=True, default=0.0)
     total_per_load = fields.Monetary(string='Total per Load', compute='_compute_total_per_load', store=True, currency_field='currency_id')
     route_id = fields.Many2one('trucking.route', string='Route')
+    is_cross_border_route = fields.Boolean(related='route_id.is_cross_border')
+    border_tracking_ids = fields.One2many('trucking.load.border', 'load_id', string='Border Tracking')
+    tracking_progress_html = fields.Html(string='Progress Tracker', compute='_compute_tracking_progress')
+
     product_id = fields.Many2one('product.product', string='Product', domain="[('type', '=', 'service')]", default=lambda self: self.env.ref('trucking.product_trucking_service', raise_if_not_found=False))
 
     currency_id = fields.Many2one('res.currency', related='company_id.currency_id', readonly=True)
@@ -147,6 +151,130 @@ class TruckingLoad(models.Model):
                     'message': _("Trailer is taken on slot 1, choose another trailer or contact transporter to request more information.")
                 }
             }
+
+    @api.onchange('route_id')
+    def _onchange_route_id(self):
+        if self.route_id and self.route_id.is_cross_border:
+            # Clear existing borders
+            self.border_tracking_ids = [(5, 0, 0)]
+            # Copy borders from route
+            new_lines = []
+            for rb in self.route_id.border_ids:
+                new_lines.append((0, 0, {
+                    'sequence': rb.sequence,
+                    'border_id': rb.border_id.id,
+                }))
+            self.border_tracking_ids = new_lines
+
+    @api.depends('border_tracking_ids.ata', 'border_tracking_ids.atd', 'state', 'date_loaded', 'delivery_date', 'route_id')
+    def _compute_tracking_progress(self):
+        for rec in self:
+            if not rec.route_id:
+                rec.tracking_progress_html = "<div class='text-muted'>No tracking data available for this route.</div>"
+                continue
+            
+            nodes = []
+            
+            # 1. Source Node
+            source_departed = bool(rec.date_loaded or rec.state in ('in_progress', 'delivered', 'invoiced'))
+            source_status = f"Departed on {rec.date_loaded.strftime('%b %d')}" if source_departed and rec.date_loaded else "Departed" if source_departed else "Pending"
+            nodes.append({
+                'name': rec.route_id.source if rec.route_id.source else 'Source',
+                'status': source_status,
+                'arrived': source_departed,
+                'departed': source_departed,
+                'type': 'source'
+            })
+            
+            # 2. Border Nodes (only if cross border)
+            if rec.route_id.is_cross_border:
+                for border in rec.border_tracking_ids.sorted('sequence'):
+                    if border.atd:
+                        time_str = border.atd.strftime('%b %d, %H:%M')
+                        status = f"Departed at {time_str}"
+                        if 'Delayed' in (border.departure_status or ''):
+                            status += f"<br/><span style='color: #ef4444; font-size: 11px;'>{border.departure_status}</span>"
+                    elif border.ata:
+                        time_str = border.ata.strftime('%b %d, %H:%M')
+                        status = f"Arrived at {time_str}"
+                        if 'Delayed' in (border.arrival_status or ''):
+                            status += f"<br/><span style='color: #ef4444; font-size: 11px;'>{border.arrival_status}</span>"
+                    else:
+                        status = "Pending"
+                        
+                    nodes.append({
+                        'name': border.border_id.name,
+                        'status': status,
+                        'arrived': bool(border.ata or border.atd),
+                        'departed': bool(border.atd),
+                        'type': 'border'
+                    })
+                    
+            # 3. Destination Node
+            dest_arrived = bool(rec.delivery_date or rec.state in ('delivered', 'invoiced'))
+            dest_status = f"Arrived on {rec.delivery_date.strftime('%b %d')}" if dest_arrived and rec.delivery_date else "Arrived" if dest_arrived else "Pending"
+            nodes.append({
+                'name': rec.route_id.destination if rec.route_id.destination else 'Destination',
+                'status': dest_status,
+                'arrived': dest_arrived,
+                'departed': dest_arrived,
+                'type': 'destination'
+            })
+            
+            current_node_idx = -1
+            for i, n in enumerate(nodes):
+                if n['arrived'] or n['departed']:
+                    current_node_idx = i
+                    
+            html = '<div style="display: flex; justify-content: space-between; width: 100%; padding: 20px 0; background: #f8f9fa; border-radius: 10px;">'
+
+            total = len(nodes)
+            for idx, node in enumerate(nodes):
+                is_last = (idx == total - 1)
+                
+                color = "#cbd5e1"
+                icon = ""
+                
+                # Assign icons
+                if node['type'] in ('source', 'destination'):
+                    icon = '<i class="fa fa-building"></i>'
+                else:
+                    if node['departed']:
+                        icon = '&#10003;'
+                    elif node['arrived']:
+                        icon = '&#9679;'
+                        
+                # Assign colors
+                if node['departed']:
+                    color = "#10b981"
+                elif node['arrived']:
+                    color = "#3b82f6"
+                    
+                show_truck = (idx == current_node_idx)
+                # Used fa-flip-horizontal so the truck faces right
+                truck_html = '<div style="font-size: 20px; color: #10b981; height: 32px; display: flex; align-items: flex-end; justify-content: center;"><i class="fa fa-truck fa-flip-horizontal"></i></div>' if show_truck else '<div style="height: 32px;"></div>'
+
+                html += f'<div style="flex: 1; position: relative; text-align: center;">'
+                
+                # Line to the next node
+                if not is_last:
+                    line_color = "#10b981" if node['departed'] else "#cbd5e1"
+                    html += f'<div style="position: absolute; top: 49px; left: 50%; width: 100%; height: 4px; background-color: {line_color}; z-index: 0;"></div>'
+                    
+                html += f"""
+                    <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1;">
+                        {truck_html}
+                        <div style="width: 30px; height: 30px; border-radius: 50%; background-color: {color}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 6px solid #f8f9fa; box-sizing: content-box;">
+                            {icon}
+                        </div>
+                        <div style="margin-top: 10px; font-weight: bold; font-size: 14px; word-wrap: break-word; max-width: 90%;">{node['name']}</div>
+                        <div style="font-size: 12px; color: #64748b;">{node['status']}</div>
+                    </div>
+                </div>
+                """
+
+            html += "</div>"
+            rec.tracking_progress_html = html
 
     @api.depends('qty_tonnes', 'rate_per_tonne')
     def _compute_total_per_load(self):
