@@ -46,10 +46,10 @@ class TruckingLoad(models.Model):
     expected_delivery_date = fields.Date(string='Expected Delivery Date', required=True)
     customer_id = fields.Many2one('res.partner', string='Customer', required=True, tracking=True)
     transporter_id = fields.Many2one('res.partner', string='Transporter', required=True, tracking=True)
-    vehicle_id = fields.Many2one('trucking.vehicle', string='Truck Reg', required=True, domain="[('partner_id', '=', transporter_id)]")
+    vehicle_id = fields.Many2one('trucking.vehicle', string='Truck Reg', domain="[('partner_id', '=', transporter_id)]")
     trailer_1_reg = fields.Char(string='Trailer 1 Reg (Old)')
     trailer_2_reg = fields.Char(string='Trailer 2 Reg (Old)')
-    trailer_1_id = fields.Many2one('trucking.trailer', string='Trailer 1 Reg', required=True)
+    trailer_1_id = fields.Many2one('trucking.trailer', string='Trailer 1 Reg')
     trailer_2_id = fields.Many2one('trucking.trailer', string='Trailer 2 Reg')
     qty_tonnes = fields.Float(string='Qty Tonnes', required=True, default=0.0)
     rate_per_tonne = fields.Monetary(string='Rate per Tonne', currency_field='currency_id', required=True, default=0.0)
@@ -224,6 +224,8 @@ class TruckingLoad(models.Model):
 
     def action_deliver(self):
         for rec in self:
+            if not rec.vehicle_id or not rec.trailer_1_id:
+                raise UserError(_("Truck Reg and Trailer 1 Reg are required before proceeding."))
             if not rec.bill_customer_qty or not rec.bill_transporter_qty:
                 raise UserError(_("Please choose a Billing Policy before delivering."))
             if rec.state not in ('in_progress', 'overdue'):
@@ -366,6 +368,8 @@ class TruckingLoad(models.Model):
 
     def action_confirm_load(self):
         for rec in self:
+            if not rec.vehicle_id or not rec.trailer_1_id:
+                raise UserError(_("Truck Reg and Trailer 1 Reg are required before proceeding."))
             today = fields.Date.context_today(self)
             if rec.date_loaded and rec.date_loaded > today:
                 rec.state = 'upcoming'
@@ -386,6 +390,8 @@ class TruckingLoad(models.Model):
 
     def action_request_fuel_approval(self):
         for rec in self:
+            if not rec.vehicle_id or not rec.trailer_1_id:
+                raise UserError(_("Truck Reg and Trailer 1 Reg are required before requesting fuel approval."))
             if rec.fuel_amount <= 0:
                 # Return Wizard
                 return {
@@ -439,6 +445,8 @@ class TruckingLoad(models.Model):
 
     def action_request_deposit_approval(self):
         for rec in self:
+            if not rec.vehicle_id or not rec.trailer_1_id:
+                raise UserError(_("Truck Reg and Trailer 1 Reg are required before requesting deposit approval."))
             if rec.deposit_amount <= 0:
                 # Return Wizard
                 return {
