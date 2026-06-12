@@ -59,7 +59,7 @@ class TruckingLoad(models.Model):
     border_tracking_ids = fields.One2many('trucking.load.border', 'load_id', string='Border Tracking')
     tracking_progress_html = fields.Html(string='Progress Tracker', compute='_compute_tracking_progress')
 
-    product_id = fields.Many2one('product.product', string='Product', domain="[('type', '=', 'service')]", default=lambda self: self.env.ref('trucking.product_trucking_service', raise_if_not_found=False))
+    product_id = fields.Many2one('product.product', string='Cargo', domain="[('type', '=', 'service')]", default=lambda self: self.env.ref('trucking.product_trucking_service', raise_if_not_found=False))
 
     currency_id = fields.Many2one('res.currency', related='company_id.currency_id', readonly=True)
     company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)

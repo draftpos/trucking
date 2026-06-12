@@ -8,6 +8,7 @@
                 <field name="name"/>
                 <field name="transporter_id"/>
                 <field name="customer_id"/>
+                <field name="product_id" string="Cargo"/>
                 <field name="transporter_balance"/>
                 <field name="pod"/>
                 <field name="customer_balance"/>
@@ -63,7 +64,7 @@
                                         <field name="qty_tonnes" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                         <field name="rate_per_tonne" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                         <field name="total_per_load" widget="monetary"/>
-                                        <field name="product_id" readonly="1" force_save="1"/>
+                                        <field name="product_id" string="Cargo" readonly="state in ('in_progress', 'delivered', 'invoiced')" context="{'default_type': 'service', 'default_description_sale': 'Trucking and freight services.'}"/>
                                         <field name="currency_id" invisible="1"/>
                                         <field name="company_id" invisible="1"/>
                                     </group>
