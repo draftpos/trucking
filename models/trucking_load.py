@@ -49,8 +49,8 @@ class TruckingLoad(models.Model):
     vehicle_id = fields.Many2one('trucking.vehicle', string='Truck Reg', domain="[('partner_id', '=', transporter_id)]")
     trailer_1_reg = fields.Char(string='Trailer 1 Reg (Old)')
     trailer_2_reg = fields.Char(string='Trailer 2 Reg (Old)')
-    trailer_1_id = fields.Many2one('trucking.trailer', string='Trailer 1 Reg')
-    trailer_2_id = fields.Many2one('trucking.trailer', string='Trailer 2 Reg')
+    trailer_1_id = fields.Many2one('trucking.trailer', string='Trailer 1 Reg', domain="[('partner_id', '=', transporter_id)]")
+    trailer_2_id = fields.Many2one('trucking.trailer', string='Trailer 2 Reg', domain="[('partner_id', '=', transporter_id)]")
     qty_tonnes = fields.Float(string='Qty Tonnes', required=True, default=0.0)
     rate_per_tonne = fields.Monetary(string='Rate per Tonne', currency_field='currency_id', required=True, default=0.0)
     total_per_load = fields.Monetary(string='Total per Load', compute='_compute_total_per_load', store=True, currency_field='currency_id')
@@ -137,6 +137,17 @@ class TruckingLoad(models.Model):
             elif self.vehicle_id.trailer_2_reg and not self.trailer_2_id:
                 self.trailer_2_reg = self.vehicle_id.trailer_2_reg
 
+    @api.onchange('trailer_1_id', 'trailer_2_id')
+    def _onchange_trailers(self):
+        if self.trailer_1_id and self.trailer_2_id and self.trailer_1_id == self.trailer_2_id:
+            self.trailer_2_id = False
+            return {
+                'warning': {
+                    'title': _("Validation Error"),
+                    'message': _("Trailer is taken on slot 1, choose another trailer or contact transporter to request more information.")
+                }
+            }
+
     @api.depends('qty_tonnes', 'rate_per_tonne')
     def _compute_total_per_load(self):
         for rec in self:
@@ -182,6 +193,12 @@ class TruckingLoad(models.Model):
         for rec in self:
             if rec.delivered_qty > rec.qty_tonnes:
                 raise ValidationError(_("Delivered Qty cannot exceed Loaded Qty (Qty Tonnes)."))
+
+    @api.constrains('trailer_1_id', 'trailer_2_id')
+    def _check_duplicate_trailers(self):
+        for rec in self:
+            if rec.trailer_1_id and rec.trailer_2_id and rec.trailer_1_id == rec.trailer_2_id:
+                raise ValidationError(_("Trailer is taken on slot 1, choose another trailer or contact transporter to request more information."))
 
     payment_ids = fields.One2many('account.payment', 'load_id', string='Payments')
 
