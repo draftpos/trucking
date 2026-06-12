@@ -30,7 +30,7 @@
                             <field name="model"/>
                         </group>
                         <group>
-                            <field name="partner_id" domain="[('is_supplier', '=', True)]" context="{'default_is_supplier': True}"/>
+                            <field name="partner_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True}"/>
                         </group>
                     </group>
                 </sheet>

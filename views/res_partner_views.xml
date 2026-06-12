@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_trucking_blacklist" model="ir.ui.view">
+        <field name="name">res.partner.form.trucking.blacklist</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_blacklist_transporter" type="object" string="Blacklist Transporter" class="btn-danger" invisible="not is_supplier or is_blacklisted_transporter" confirm="Are you sure you want to blacklist this supplier? They won't be eligible for Truckloads."/>
+                    <button name="action_unblacklist_transporter" type="object" string="Un-Blacklist Transporter" class="btn-secondary" invisible="not is_blacklisted_transporter"/>
+                </header>
+            </xpath>
+            
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="is_blacklisted_transporter" invisible="1"/>
+            </xpath>
+
+            <xpath expr="//sheet" position="inside">
+                <widget name="web_ribbon" title="Blacklisted Transporter" bg_color="text-bg-danger" invisible="not is_blacklisted_transporter"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

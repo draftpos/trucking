@@ -6,6 +6,15 @@ class ResPartner(models.Model):
     total_transporter_balance = fields.Monetary(string='Total Transporter Balance', compute='_compute_trucking_balances')
     total_customer_balance = fields.Monetary(string='Total Customer Balance', compute='_compute_trucking_balances')
     total_overdue_pods = fields.Integer(string='Total Overdue PODs', compute='_compute_trucking_balances')
+    is_blacklisted_transporter = fields.Boolean(string="Blacklisted Transporter", default=False, tracking=True)
+
+    def action_blacklist_transporter(self):
+        for record in self:
+            record.is_blacklisted_transporter = True
+
+    def action_unblacklist_transporter(self):
+        for record in self:
+            record.is_blacklisted_transporter = False
 
     def _compute_trucking_balances(self):
         for partner in self:

@@ -31,7 +31,7 @@
                             <field name="model"/>
                         </group>
                         <group>
-                            <field name="partner_id" context="{'res_partner_search_mode': 'supplier'}"/>
+                            <field name="partner_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'res_partner_search_mode': 'supplier'}"/>
                             <field name="trailer_1_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}"/>
                             <field name="trailer_2_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}"/>
                         </group>
