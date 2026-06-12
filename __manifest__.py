@@ -9,6 +9,7 @@
         "security/trucking_security.xml",
         "security/ir.model.access.csv",
         "data/trucking_data.xml",
+        "data/trucking_cron.xml",
         "views/res_partner_views.xml",
         "views/trucking_trailer_views.xml",
         "views/trucking_vehicle_views.xml",

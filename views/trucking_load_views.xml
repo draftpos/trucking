@@ -41,12 +41,17 @@
                             Order No: <field name="name" readonly="1" class="oe_inline"/>
                         </h1>
                     </div>
+                    <widget name="web_ribbon" title="DELAYED LOADING" bg_color="text-bg-danger" invisible="not is_delayed_loading"/>
+
                     
                     <div class="row mt-3">
                         <!-- Loading Details -->
                         <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px;">
                             <h4 class="text-primary mb-3">Loading Details</h4>
                             <group>
+                                <field name="is_delayed_loading" invisible="1"/>
+                                <field name="booking_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
+                                <field name="expected_loading_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                 <field name="date_loaded" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                 <field name="expected_delivery_date" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                 <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>

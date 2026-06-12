@@ -39,6 +39,10 @@ class TruckingLoad(models.Model):
 
     # 1. Loading Details
     date_loaded = fields.Date(string='Date Loaded', default=fields.Date.context_today)
+    booking_date = fields.Date(string='Booking Date', default=fields.Date.context_today)
+    expected_loading_date = fields.Datetime(string='Expected Loading Date')
+    is_delayed_loading = fields.Boolean(string='Delayed Loading', default=False, tracking=True)
+
     expected_delivery_date = fields.Date(string='Expected Delivery Date', required=True)
     customer_id = fields.Many2one('res.partner', string='Customer', required=True, tracking=True)
     transporter_id = fields.Many2one('res.partner', string='Transporter', required=True, tracking=True)
@@ -104,6 +108,20 @@ class TruckingLoad(models.Model):
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('trucking.load') or _('New')
         return super().create(vals_list)
+
+    @api.model
+    def _cron_check_delayed_loading(self):
+        now = fields.Datetime.now()
+        # Find loads that are not yet delayed and are not in a final state
+        loads = self.search([
+            ('expected_loading_date', '<', now),
+            ('is_delayed_loading', '=', False),
+            ('state', 'in', ('draft', 'upcoming', 'in_progress'))
+        ])
+        for load in loads:
+            # If no date_loaded is set, or if it doesn't match the expected loading date
+            if not load.date_loaded or load.date_loaded != load.expected_loading_date.date():
+                load.is_delayed_loading = True
 
     @api.onchange('vehicle_id')
     def _onchange_vehicle_id(self):
