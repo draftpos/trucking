@@ -1,7 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-    <!-- Root Menu -->
-    <menuitem id="menu_trucking_root" name="Trucking" web_icon="trucking,static/description/icon.png" sequence="30"/>
+    
+    <menuitem id="menu_trucking_root" name="Trucking" web_icon="trucking,static/description/icon.png" sequence="30" />
+    <menuitem id="menu_trucking_accounting" name="Accounting" parent="menu_trucking_root" sequence="60" />
+    <menuitem id="menu_trucking_reporting" name="Reporting" parent="menu_trucking_root" sequence="90" />
+    <menuitem id="menu_trucking_config" name="Configurations" parent="menu_trucking_root" sequence="100" />
 
     <record id="action_trucking_dashboard" model="ir.actions.client">
         <field name="name">Trucking Dashboard</field>
@@ -14,11 +17,11 @@
         <field name="priority">100</field>
         <field name="arch" type="xml">
             <list string="Customers">
-                <field name="name"/>
-                <field name="contact_type"/>
-                <field name="phone"/>
-                <field name="total_customer_balance" sum="Total Balance"/>
-                <field name="total_overdue_pods" sum="Total Overdue"/>
+                <field name="name" optional="show" />
+                <field name="contact_type" optional="show" />
+                <field name="phone" optional="show" />
+                <field name="total_customer_balance" sum="Total Balance" optional="show" />
+                <field name="total_overdue_pods" sum="Total Overdue" optional="show" />
             </list>
         </field>
     </record>
@@ -28,13 +31,13 @@
         <field name="model">res.partner</field>
         <field name="priority">100</field>
         <field name="arch" type="xml">
-            <list string="Transporters" decoration-danger="is_blacklisted_transporter">
-                <field name="name"/>
-                <field name="contact_type"/>
-                <field name="phone"/>
-                <field name="total_transporter_balance" sum="Total Balance"/>
-                <field name="total_overdue_pods" sum="Total Overdue"/>
-                <field name="is_blacklisted_transporter" string="Blacklisted" widget="boolean" readonly="1"/>
+            <list string="Transporters" decoration-danger="is_blacklisted_transporter" create="0">
+                <field name="name" optional="show" />
+                <field name="contact_type" optional="show" />
+                <field name="phone" optional="show" />
+                <field name="total_transporter_balance" sum="Total Balance" optional="show" />
+                <field name="total_overdue_pods" sum="Total Overdue" optional="show" />
+                <field name="is_blacklisted_transporter" string="Blacklisted" widget="boolean" readonly="1" optional="show" />
             </list>
         </field>
     </record>
@@ -48,49 +51,43 @@
     </record>
 
     <record id="action_trucking_customer_tree" model="ir.actions.act_window.view">
-        <field eval="1" name="sequence"/>
+        <field eval="1" name="sequence" />
         <field name="view_mode">list</field>
-        <field name="view_id" ref="view_trucking_customer_tree"/>
-        <field name="act_window_id" ref="action_trucking_customer"/>
+        <field name="view_id" ref="view_trucking_customer_tree" />
+        <field name="act_window_id" ref="action_trucking_customer" />
     </record>
 
     <record id="action_trucking_customer_kanban" model="ir.actions.act_window.view">
-        <field eval="2" name="sequence"/>
+        <field eval="2" name="sequence" />
         <field name="view_mode">kanban</field>
-        <field name="act_window_id" ref="action_trucking_customer"/>
+        <field name="act_window_id" ref="action_trucking_customer" />
     </record>
 
     <record id="action_trucking_customer_form" model="ir.actions.act_window.view">
-        <field eval="3" name="sequence"/>
+        <field eval="3" name="sequence" />
         <field name="view_mode">form</field>
-        <field name="act_window_id" ref="action_trucking_customer"/>
+        <field name="act_window_id" ref="action_trucking_customer" />
     </record>
 
     <record id="action_trucking_transporter" model="ir.actions.act_window">
         <field name="name">Transporters</field>
         <field name="res_model">res.partner</field>
-        <field name="view_mode">list,kanban,form</field>
+        <field name="view_mode">list,form</field>
         <field name="domain">[('contact_type', 'in', ('supplier', 'both'))]</field>
         <field name="context">{'default_contact_type': 'supplier', 'res_partner_search_mode': 'supplier'}</field>
     </record>
 
     <record id="action_trucking_transporter_tree" model="ir.actions.act_window.view">
-        <field eval="1" name="sequence"/>
+        <field eval="1" name="sequence" />
         <field name="view_mode">list</field>
-        <field name="view_id" ref="view_trucking_transporter_tree"/>
-        <field name="act_window_id" ref="action_trucking_transporter"/>
-    </record>
-
-    <record id="action_trucking_transporter_kanban" model="ir.actions.act_window.view">
-        <field eval="2" name="sequence"/>
-        <field name="view_mode">kanban</field>
-        <field name="act_window_id" ref="action_trucking_transporter"/>
+        <field name="view_id" ref="view_trucking_transporter_tree" />
+        <field name="act_window_id" ref="action_trucking_transporter" />
     </record>
 
     <record id="action_trucking_transporter_form" model="ir.actions.act_window.view">
-        <field eval="3" name="sequence"/>
+        <field eval="3" name="sequence" />
         <field name="view_mode">form</field>
-        <field name="act_window_id" ref="action_trucking_transporter"/>
+        <field name="act_window_id" ref="action_trucking_transporter" />
     </record>
 
     <record id="action_trucking_blacklisted_transporter" model="ir.actions.act_window">
@@ -101,27 +98,39 @@
         <field name="context">{'default_contact_type': 'supplier', 'res_partner_search_mode': 'supplier'}</field>
     </record>
 
-    <!-- Top Level Menus -->
-    <menuitem id="menu_trucking_dashboard" name="Dashboard" parent="menu_trucking_root" action="action_trucking_dashboard" sequence="10"/>
-    <menuitem id="menu_trucking_loads" name="Loads" parent="menu_trucking_root" action="action_trucking_load" sequence="20"/>
-    <menuitem id="menu_trucking_customers" name="Customers" parent="menu_trucking_root" action="action_trucking_customer" sequence="30"/>
-    <menuitem id="menu_trucking_transporters" name="Transporters" parent="menu_trucking_root" action="action_trucking_transporter" sequence="40"/>
-    <menuitem id="menu_trucking_trucks" name="Trucks" parent="menu_trucking_root" action="action_trucking_vehicle" sequence="50"/>
-    <!-- Accounting Menu -->
-    <menuitem id="menu_trucking_accounting" name="Accounting" parent="menu_trucking_root" sequence="60"/>
-    <menuitem id="menu_trucking_payments" name="Payments" parent="menu_trucking_accounting" action="account.action_account_payments" sequence="10"/>
-    <menuitem id="menu_trucking_bills" name="Bills" parent="menu_trucking_accounting" action="account.action_move_in_invoice_type" sequence="20"/>
-    <menuitem id="menu_trucking_invoices" name="Invoices" parent="menu_trucking_accounting" action="account.action_move_out_invoice_type" sequence="30"/>
     
+    <menuitem id="menu_trucking_dashboard" name="Dashboard" parent="menu_trucking_root" action="action_trucking_dashboard" sequence="10" />
+    <menuitem id="menu_trucking_loads" name="Loads" parent="menu_trucking_root" action="action_trucking_load" sequence="20" />
+    <menuitem id="menu_trucking_customers" name="Customers" parent="menu_trucking_root" action="action_trucking_customer" sequence="30" />
+    <menuitem id="menu_trucking_transporters" name="Transporters" parent="menu_trucking_root" action="action_trucking_transporter" sequence="40" />
+    <menuitem id="menu_trucking_trucks" name="Trucks" parent="menu_trucking_config" action="action_trucking_vehicle" sequence="25" />
+    <menuitem id="menu_trucking_trailers" name="Trailers" parent="menu_trucking_config" action="action_trucking_trailer" sequence="26" />
+    <menuitem id="menu_trucking_drivers" name="Drivers" parent="menu_trucking_root" action="action_trucking_driver" sequence="52" />
+    
+
+    <menuitem id="menu_trucking_payments" name="Payments" parent="menu_trucking_accounting" action="account.action_account_payments" sequence="10" />
+    <menuitem id="menu_trucking_journals" name="Journal Entries" parent="menu_trucking_accounting" action="account.action_account_moves_all" sequence="15" />
+    <menuitem id="menu_trucking_expenses" name="Expenses" parent="menu_trucking_accounting" action="hr_expense.hr_expense_actions_my_all" sequence="20" />
+    <menuitem id="menu_trucking_invoices" name="Invoices" parent="menu_trucking_accounting" action="account.action_move_out_invoice_type" sequence="30" />
+    <menuitem id="menu_trucking_pnl" name="Profit and Loss" parent="menu_trucking_accounting" action="account_reports.action_account_report_pl" sequence="40" />    
     <record id="action_trucking_border" model="ir.actions.act_window">
         <field name="name">Borders</field>
         <field name="res_model">trucking.border</field>
         <field name="view_mode">list,form</field>
     </record>
 
-    <!-- Configurations Menu -->
-    <menuitem id="menu_trucking_config" name="Configurations" parent="menu_trucking_root" sequence="100"/>
-    <menuitem id="menu_trucking_routes" name="Routes" parent="menu_trucking_config" action="action_trucking_route" sequence="10"/>
-    <menuitem id="menu_trucking_borders" name="Borders" parent="menu_trucking_config" action="action_trucking_border" sequence="15"/>
-    <menuitem id="menu_trucking_blacklisted_transporters" name="Blacklisted Transporters" parent="menu_trucking_config" action="action_trucking_blacklisted_transporter" sequence="20"/>
+    
+
+    <menuitem id="menu_trucking_profitability" name="Customer Profitability" parent="menu_trucking_reporting" action="action_trucking_profitability_report" sequence="10" />
+    <menuitem id="menu_trucking_truck_profitability" name="Truck Profitability" parent="menu_trucking_reporting" action="action_trucking_truck_profitability_report" sequence="20" />
+    <menuitem id="menu_trucking_order_profitability" name="Order Profitability" parent="menu_trucking_reporting" action="action_trucking_order_profitability_report" sequence="30" />
+    <menuitem id="menu_trucking_statements" name="Statements" parent="menu_trucking_reporting" action="account_reports.action_account_report_partner_ledger" sequence="40" />
+
+    
+
+    <menuitem id="menu_trucking_routes" name="Routes" parent="menu_trucking_config" action="action_trucking_route" sequence="10" />
+    <menuitem id="menu_trucking_borders" name="Borders" parent="menu_trucking_config" action="action_trucking_border" sequence="15" />
+    <menuitem id="menu_trucking_blacklisted_transporters" name="Blacklisted Transporters" parent="menu_trucking_config" action="action_trucking_blacklisted_transporter" sequence="20" />
+    <menuitem id="menu_trucking_default_expenses" name="Default Expenses" parent="menu_trucking_config" action="action_trucking_default_expense" sequence="30" />
+    <menuitem id="menu_trucking_settings" name="Settings" parent="menu_trucking_config" action="action_trucking_config_settings" sequence="100" />
 </odoo>

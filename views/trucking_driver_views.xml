@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='utf-8'?>
+<odoo>
+    <record id="view_trucking_driver_tree" model="ir.ui.view">
+        <field name="name">trucking.driver.tree</field>
+        <field name="model">trucking.driver</field>
+        <field name="arch" type="xml">
+            <list string="Drivers">
+                <field name="name" optional="show" />
+                <field name="phone" optional="show" />
+                <field name="license_number" optional="show" />
+            </list>
+        </field>
+    </record>
+
+    <record id="view_trucking_driver_form" model="ir.ui.view">
+        <field name="name">trucking.driver.form</field>
+        <field name="model">trucking.driver</field>
+        <field name="arch" type="xml">
+            <form string="Driver">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active == True" />
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Driver Name..." />
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="phone" />
+                            <field name="license_number" />
+                        </group>
+                        <group>
+                            <field name="address" />
+                            <field name="active" invisible="1" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_trucking_driver" model="ir.actions.act_window">
+        <field name="name">Drivers</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">trucking.driver</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

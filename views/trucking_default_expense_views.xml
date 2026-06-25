@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_trucking_default_expense_tree" model="ir.ui.view">
+        <field name="name">trucking.default.expense.list</field>
+        <field name="model">trucking.default.expense</field>
+        <field name="arch" type="xml">
+            <list string="Default Expenses" editable="bottom">
+                <field name="account_id" />
+                <field name="supplier_id" />
+                <field name="journal_id" />
+            </list>
+        </field>
+    </record>
+
+    <record id="action_trucking_default_expense" model="ir.actions.act_window">
+        <field name="name">Default Expenses</field>
+        <field name="res_model">trucking.default.expense</field>
+        <field name="view_mode">list</field>
+    </record>
+</odoo>

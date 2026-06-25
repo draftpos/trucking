@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.trucking</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="20"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Trucking" string="Trucking" name="trucking">
+                    <block title="Default Settings" name="trucking_defaults">
+                        <setting help="Set the default Transporter Type for new Loads.">
+                            <field name="trucking_default_transporter_type"/>
+                        </setting>
+                    </block>
+                    <block title="Accounting Settings" name="trucking_accounting">
+                        <setting help="Default Expense Account for Driver Commission">
+                            <field name="driver_commission_account_id"/>
+                        </setting>
+                        <setting help="Default Cash/Bank Journal for Driver Commission">
+                            <field name="driver_commission_journal_id"/>
+                        </setting>
+                        <setting help="Default Account to receive fuel from clients">
+                            <field name="receive_fuel_account_id"/>
+                        </setting>
+                        <setting help="Default Journal to receive fuel">
+                            <field name="receive_fuel_journal_id"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_trucking_config_settings" model="ir.actions.act_window">
+        <field name="name">Settings</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="context">{'module' : 'trucking'}</field>
+    </record>
+</odoo>

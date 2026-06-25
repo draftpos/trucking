@@ -27,7 +27,7 @@ export class TruckingDashboard extends Component {
         this.charts = {};
 
         this.state = useState({
-            dateFilter: 'all',
+            dateFilter: 'month',
             metrics: {
                 total_delivered: 0,
                 in_progress: 0,
@@ -69,6 +69,13 @@ export class TruckingDashboard extends Component {
             this.updateCalendar();
             setTimeout(() => this.renderCharts(), 0);
         }
+    }
+
+    formatCurrency(value) {
+        if (value === undefined || value === null) return "$0.00";
+        let parts = Number(value).toFixed(2).split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        return "$" + parts.join(".");
     }
 
     updateCalendar() {

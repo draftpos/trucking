@@ -12,6 +12,18 @@
                 </header>
             </xpath>
             
+            <xpath expr="//div[@name='button_box']/*[1]" position="before">
+                <button class="oe_stat_button" type="object" name="action_view_trucking_loads" icon="fa-truck" invisible="not is_customer">
+                    <field string="Loads" name="load_count" widget="statinfo"/>
+                </button>
+                <button class="oe_stat_button" type="object" name="action_view_trucking_loads" icon="fa-usd" invisible="not is_customer">
+                    <div class="o_stat_info">
+                        <field name="current_month_profit" class="o_stat_value"/>
+                        <span class="o_stat_text">Profit (This Month)</span>
+                    </div>
+                </button>
+            </xpath>
+            
             <xpath expr="//field[@name='category_id']" position="after">
                 <field name="is_blacklisted_transporter" invisible="1"/>
             </xpath>

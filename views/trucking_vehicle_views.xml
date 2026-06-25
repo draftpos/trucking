@@ -1,15 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-    <!-- Trucking Vehicle -->
+    
     <record id="view_trucking_vehicle_tree" model="ir.ui.view">
         <field name="name">trucking.vehicle.tree</field>
         <field name="model">trucking.vehicle</field>
         <field name="arch" type="xml">
             <list string="Trucks">
-                <field name="reg_number"/>
-                <field name="make"/>
-                <field name="model"/>
-                <field name="partner_id"/>
+                <field name="reg_number" optional="show" />
+                <field name="make" optional="show" />
+                <field name="model" optional="show" />
+                <field name="partner_id" optional="show" />
             </list>
         </field>
     </record>
@@ -22,18 +22,20 @@
                 <sheet>
                     <div class="oe_title">
                         <h1>
-                            <field name="reg_number" placeholder="Registration Number"/>
+                            <field name="reg_number" placeholder="Registration Number" />
                         </h1>
                     </div>
                     <group>
                         <group>
-                            <field name="make"/>
-                            <field name="model"/>
+                            <field name="make" />
+                            <field name="model" />
                         </group>
                         <group>
-                            <field name="partner_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'res_partner_search_mode': 'supplier'}"/>
-                            <field name="trailer_1_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}"/>
-                            <field name="trailer_2_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}"/>
+                            <field name="ownership_type" widget="radio" options="{'horizontal': true}" />
+                            <field name="partner_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True}" readonly="ownership_type == 'company'" force_save="1" />
+
+                            <field name="trailer_1_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" />
+                            <field name="trailer_2_id" context="{'default_partner_id': partner_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" />
                         </group>
                     </group>
                 </sheet>

@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <record id="view_trucking_trailer_tree" model="ir.ui.view">
         <field name="name">trucking.trailer.tree</field>
         <field name="model">trucking.trailer</field>
         <field name="arch" type="xml">
             <list string="Trailers">
-                <field name="reg_number"/>
-                <field name="make"/>
-                <field name="model"/>
-                <field name="partner_id"/>
+                <field name="reg_number" optional="show" />
+                <field name="make" optional="show" />
+                <field name="model" optional="show" />
+                <field name="partner_id" optional="show" />
             </list>
         </field>
     </record>
@@ -21,16 +21,18 @@
                 <sheet>
                     <div class="oe_title">
                         <h1>
-                            <field name="reg_number" placeholder="Registration Number"/>
+                            <field name="reg_number" placeholder="Registration Number" />
                         </h1>
                     </div>
                     <group>
                         <group>
-                            <field name="make"/>
-                            <field name="model"/>
+                            <field name="make" />
+                            <field name="model" />
                         </group>
                         <group>
-                            <field name="partner_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True}"/>
+                            <field name="ownership_type" widget="radio" options="{'horizontal': true}" />
+                            <field name="partner_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True}" readonly="ownership_type == 'company'" force_save="1" />
+
                         </group>
                     </group>
                 </sheet>
@@ -44,6 +46,6 @@
         <field name="view_mode">list,form</field>
     </record>
 
-    <!-- Menu Item for Trailers -->
-    <menuitem id="menu_trucking_trailers" name="Trailers" parent="trucking.menu_trucking_root" action="action_trucking_trailer" sequence="55"/>
+    
+
 </odoo>

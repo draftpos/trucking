@@ -4,8 +4,8 @@ from odoo.exceptions import UserError, ValidationError
 class TruckingLoad(models.Model):
     _name = 'trucking.load'
     _description = 'Trucking Load'
-    _order = 'name desc'
     _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = 'id desc'
 
     # Header / State
     name = fields.Char(string='Order No', required=True, copy=False, readonly=True, default=lambda self: self.env['ir.sequence'].next_by_code('trucking.load') or _('New'))
@@ -38,22 +38,43 @@ class TruckingLoad(models.Model):
     deposit_reject_reason = fields.Text(string='Deposit Reject Reason')
 
     # 1. Loading Details
-    date_loaded = fields.Date(string='Date Loaded', default=fields.Date.context_today)
+    date_loaded = fields.Datetime(string='Date Loaded', default=fields.Datetime.now)
     booking_date = fields.Date(string='Booking Date', default=fields.Date.context_today)
     expected_loading_date = fields.Datetime(string='Expected Loading Date')
     is_delayed_loading = fields.Boolean(string='Delayed Loading', default=False, tracking=True)
 
-    expected_delivery_date = fields.Date(string='Expected Delivery Date', required=True)
+    transporter_type = fields.Selection([
+        ('external', 'External Transporter'),
+        ('in_house', 'In-House')
+    ], string='Transporter Type', default=lambda self: self.env['ir.config_parameter'].sudo().get_param('trucking.default_transporter_type', default='external'), tracking=True)
+    is_walk_in = fields.Boolean(string='Walk In Customer', default=False)
+    driver_id = fields.Many2one('trucking.driver', string='Driver', required=True)
+    expected_delivery_date = fields.Datetime(string='Expected Delivery Date', required=True)
     customer_id = fields.Many2one('res.partner', string='Customer', required=True, tracking=True)
-    transporter_id = fields.Many2one('res.partner', string='Transporter', required=True, tracking=True)
-    vehicle_id = fields.Many2one('trucking.vehicle', string='Truck Reg', domain="[('partner_id', '=', transporter_id)]")
+    transporter_id = fields.Many2one('res.partner', string='Transporter', tracking=True)
+    vehicle_id = fields.Many2one('trucking.vehicle', string='Truck Reg')
     trailer_1_reg = fields.Char(string='Trailer 1 Reg (Old)')
     trailer_2_reg = fields.Char(string='Trailer 2 Reg (Old)')
-    trailer_1_id = fields.Many2one('trucking.trailer', string='Trailer 1 Reg', domain="[('partner_id', '=', transporter_id)]")
-    trailer_2_id = fields.Many2one('trucking.trailer', string='Trailer 2 Reg', domain="[('partner_id', '=', transporter_id)]")
-    qty_tonnes = fields.Float(string='Qty Tonnes', required=True, default=0.0)
+    trailer_1_id = fields.Many2one('trucking.trailer', string='Trailer 1 Reg')
+    trailer_2_id = fields.Many2one('trucking.trailer', string='Trailer 2 Reg')
+    qty_tonnes = fields.Float(string='Qty Tonnes', default=lambda self: None)
     rate_per_tonne = fields.Monetary(string='Rate per Tonne', currency_field='currency_id', required=True, default=0.0)
     total_per_load = fields.Monetary(string='Total per Load', compute='_compute_total_per_load', store=True, currency_field='currency_id')
+
+    transporter_display = fields.Char(string='Transporter', compute='_compute_transporter_display')
+    transporter_balance_display = fields.Char(string='Transporter Bal...', compute='_compute_transporter_display')
+
+    @api.depends('transporter_type', 'transporter_id', 'transporter_balance', 'currency_id')
+    def _compute_transporter_display(self):
+        for rec in self:
+            if rec.transporter_type == 'in_house':
+                rec.transporter_display = 'In-House'
+                rec.transporter_balance_display = 'In-House'
+            else:
+                rec.transporter_display = rec.transporter_id.name if rec.transporter_id else ''
+                currency = rec.currency_id or self.env.company.currency_id
+                rec.transporter_balance_display = f"{currency.symbol or ''} {rec.transporter_balance:,.2f}"
+
     route_id = fields.Many2one('trucking.route', string='Route')
     is_cross_border_route = fields.Boolean(related='route_id.is_cross_border')
     border_tracking_ids = fields.One2many('trucking.load.border', 'load_id', string='Border Tracking')
@@ -73,8 +94,45 @@ class TruckingLoad(models.Model):
     journal_id = fields.Many2one('account.journal', string='Cash/Bank Acc', domain="[('type', 'in', ('bank', 'cash'))]")
 
     # 3. Delivery Info
-    delivery_date = fields.Date(string='Delivery Date')
+    delivery_date = fields.Datetime(string='Date Delivered')
     pod = fields.Char(string='POD')
+    pod_date = fields.Date(string='POD Date')
+    pod_confirmed = fields.Boolean(string='POD Confirmed')
+
+    @api.constrains('pod', 'pod_confirmed')
+    def _check_pod_confirmed(self):
+        for rec in self:
+            if rec.pod_confirmed and not rec.pod:
+                raise ValidationError(_("You cannot confirm the POD if the POD number/value is empty."))
+
+    @api.onchange('pod')
+    def _onchange_pod(self):
+        for rec in self:
+            if rec.pod and not rec.pod_date:
+                rec.pod_date = fields.Date.context_today(rec)
+    expense_ids = fields.One2many('trucking.load.expense', 'load_id', string='Expenses')
+    total_expenses = fields.Monetary(string='Total Expenses', compute='_compute_total_expenses', store=True)
+
+    driver_commission_amount = fields.Monetary(string='Driver Commission', currency_field='currency_id', tracking=True)
+    driver_commission_move_id = fields.Many2one('account.move', string='Commission Journal Entry', readonly=True)
+    total_commission = fields.Monetary(string='Total Commission', compute='_compute_total_commission', store=True)
+    total_all_expenses = fields.Monetary(string='Total Expenses & Commission', compute='_compute_total_all_expenses', store=True)
+
+    @api.depends('driver_commission_amount')
+    def _compute_total_commission(self):
+        for rec in self:
+            rec.total_commission = rec.driver_commission_amount
+
+    @api.depends('expense_ids.amount')
+    def _compute_total_expenses(self):
+        for rec in self:
+            rec.total_expenses = sum(rec.expense_ids.mapped('amount'))
+
+    @api.depends('total_expenses', 'total_commission', 'issued_fuel_cost')
+    def _compute_total_all_expenses(self):
+        for rec in self:
+            rec.total_all_expenses = rec.total_expenses + rec.total_commission + rec.issued_fuel_cost
+
     delivered_qty = fields.Float(string='Delivered Qty')
     variance_qty = fields.Float(string='Variance Qty', compute='_compute_variance_qty', store=True)
     variance_value = fields.Monetary(string='Variance Value', compute='_compute_variance_value', store=True, currency_field='currency_id')
@@ -89,7 +147,7 @@ class TruckingLoad(models.Model):
     invoice_id = fields.Many2one('account.move', string='Invoice No', readonly=True)
     invoiced_amount = fields.Monetary(string='Invoiced Amount', compute='_compute_invoiced_amount', store=True, currency_field='currency_id')
     paid = fields.Monetary(string='Paid', compute='_compute_invoiced_amount', store=True, currency_field='currency_id')
-    customer_rate = fields.Monetary(string='Rate', currency_field='currency_id', required=True, default=0.0)
+    customer_rate = fields.Monetary(string='Rate', currency_field='currency_id', default=lambda self: None)
     customer_balance = fields.Monetary(string='Customer Bal', compute='_compute_invoiced_amount', store=True, currency_field='currency_id')
     gross_profit = fields.Monetary(string='Gross Profit', compute='_compute_gross_profit', store=True, currency_field='currency_id')
 
@@ -105,13 +163,226 @@ class TruckingLoad(models.Model):
     purchase_order_id = fields.Many2one('purchase.order', string='Purchase Order', readonly=True)
     sale_order_id = fields.Many2one('sale.order', string='Sales Order', readonly=True)
     analytic_account_id = fields.Many2one('account.analytic.account', string='Analytic Account', readonly=True)
+    fuel_scrap_ids = fields.One2many('stock.scrap', 'trucking_load_id', string='Fuel Issues')
+    has_issued_fuel = fields.Boolean(compute='_compute_has_issued_fuel', string='Has Issued Fuel')
+    issued_fuel_cost = fields.Monetary(string='Issued Fuel Cost', compute='_compute_issued_fuel_cost', store=True, currency_field='currency_id')
+    fuel_issue_logs = fields.Html(compute='_compute_fuel_issue_logs', string='Fuel Issue Logs')
+    receive_fuel_logs = fields.Html(string='Receive Fuel Logs', readonly=True)
+
+    @api.depends('fuel_scrap_ids')
+    def _compute_has_issued_fuel(self):
+        for rec in self:
+            rec.has_issued_fuel = bool(rec.fuel_scrap_ids)
+
+    @api.depends('fuel_scrap_ids.state', 'fuel_scrap_ids.scrap_qty', 'fuel_scrap_ids.product_id.standard_price')
+    def _compute_issued_fuel_cost(self):
+        for rec in self:
+            cost = 0.0
+            for scrap in rec.fuel_scrap_ids:
+                if scrap.state == 'done':
+                    cost += scrap.scrap_qty * scrap.product_id.standard_price
+            rec.issued_fuel_cost = cost
+
+    @api.depends('fuel_scrap_ids', 'fuel_scrap_ids.scrap_qty', 'fuel_scrap_ids.create_date', 'fuel_scrap_ids.create_uid')
+    def _compute_fuel_issue_logs(self):
+        for rec in self:
+            logs = []
+            for scrap in rec.fuel_scrap_ids:
+                date_str = scrap.create_date.strftime('%Y-%m-%d %H:%M') if scrap.create_date else 'Unknown Date'
+                user_name = scrap.create_uid.name if scrap.create_uid else 'System'
+                cost = scrap.scrap_qty * scrap.product_id.standard_price if scrap.state == 'done' else 0.0
+                logs.append(f"<li>Fuel issued on <b>{date_str}</b> by <b>{user_name}</b>: <b>{scrap.scrap_qty} Litres</b> with a cost of <b>${cost:.2f}</b></li>")
+            if logs:
+                rec.fuel_issue_logs = "<ul style='margin-bottom:0; padding-left:20px;'>" + "".join(logs) + "</ul>"
+            else:
+                rec.fuel_issue_logs = False
+    @api.onchange('transporter_type')
+    def _onchange_transporter_type_expenses(self):
+        if self.transporter_type == 'in_house':
+            # Load from configured defaults
+            defaults = self.env['trucking.default.expense'].search([])
+            if defaults:
+                for d in defaults:
+                    has_acc = any(exp.account_id.id == d.account_id.id for exp in self.expense_ids)
+                    if not has_acc:
+                        self.expense_ids = [(0, 0, {
+                            'account_id': d.account_id.id,
+                            'supplier_id': d.supplier_id.id,
+                            'journal_id': d.journal_id.id if d.journal_id else False,
+                            'amount': 0.0,
+                        })]
+            else:
+                # Ensure Default Supplier exists
+                default_supplier = self.env['res.partner'].sudo().search([('name', '=', 'Default Supplier')], limit=1)
+                if not default_supplier:
+                    default_supplier = self.env['res.partner'].sudo().create({'name': 'Default Supplier', 'is_supplier': True})
+                    
+                # Ensure Driver Commission account exists
+                driver_comp_account = self.env['account.account'].sudo().search([('name', '=', 'Driver Commission'), ('account_type', '=', 'expense')], limit=1)
+                if not driver_comp_account:
+                    expense_group = self.env.ref('account.data_account_type_expenses', raise_if_not_found=False)
+                    driver_comp_account = self.env['account.account'].sudo().create({
+                        'name': 'Driver Commission',
+                        'code': '600100',
+                        'account_type': 'expense',
+                    })
+
+                has_comp = any(exp.account_id.id == driver_comp_account.id for exp in self.expense_ids)
+                if not has_comp:
+                    self.expense_ids = [(0, 0, {
+                        'account_id': driver_comp_account.id,
+                        'supplier_id': default_supplier.id,
+                        'amount': 0.0,
+                    })]
+
+                # Ensure Fuel Expense Account exists
+                fuel_account = self.env['account.account'].sudo().search([('name', '=', 'Fuel Expense Account'), ('account_type', '=', 'expense')], limit=1)
+                if not fuel_account:
+                    fuel_account = self.env['account.account'].sudo().create({
+                        'name': 'Fuel Expense Account',
+                        'code': '600002',
+                        'account_type': 'expense',
+                    })
+
+                has_fuel = any(exp.account_id.id == fuel_account.id for exp in self.expense_ids)
+                if not has_fuel:
+                    self.expense_ids = [(0, 0, {
+                        'account_id': fuel_account.id,
+                        'supplier_id': default_supplier.id,
+                        'amount': 0.0,
+                    })]
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('trucking.load') or _('New')
-        return super().create(vals_list)
+            
+            # Ensure analytic account for truck
+            if vals.get('vehicle_id') and not vals.get('analytic_account_id'):
+                truck = self.env['trucking.vehicle'].browse(vals['vehicle_id'])
+                if truck.reg_number:
+                    analytic_plan = self.env['account.analytic.plan'].sudo().search([], limit=1)
+                    if analytic_plan:
+                        analytic_acc = self.env['account.analytic.account'].sudo().search([('name', '=', truck.reg_number)], limit=1)
+                        if not analytic_acc:
+                            analytic_acc = self.env['account.analytic.account'].sudo().create({
+                                'name': truck.reg_number,
+                                'plan_id': analytic_plan.id,
+                            })
+                        vals['analytic_account_id'] = analytic_acc.id
+
+        records = super(TruckingLoad, self).create(vals_list)
+        records._action_post_driver_commission()
+        return records
+
+    def write(self, vals):
+        if 'vehicle_id' in vals:
+            for rec in self:
+                vehicle_id = vals.get('vehicle_id') or rec.vehicle_id.id
+                if vehicle_id:
+                    truck = self.env['trucking.vehicle'].browse(vehicle_id)
+                    if truck.reg_number:
+                        analytic_plan = self.env['account.analytic.plan'].sudo().search([], limit=1)
+                        if analytic_plan:
+                            analytic_acc = self.env['account.analytic.account'].sudo().search([('name', '=', truck.reg_number)], limit=1)
+                            if not analytic_acc:
+                                analytic_acc = self.env['account.analytic.account'].sudo().create({
+                                    'name': truck.reg_number,
+                                    'plan_id': analytic_plan.id,
+                                })
+                            vals['analytic_account_id'] = analytic_acc.id
+        
+        if 'pod_confirmed' in vals and vals['pod_confirmed']:
+            for rec in self:
+                rec.message_post(body=f"POD Confirmed.")
+
+        if 'pod' in vals and vals['pod'] and 'pod_date' not in vals:
+            # If the user is saving a POD and no date is set, default to today
+            vals['pod_date'] = fields.Date.context_today(self)
+        
+        res = super(TruckingLoad, self).write(vals)
+        if 'driver_commission_amount' in vals or 'vehicle_id' in vals:
+            self._action_post_driver_commission()
+        return res
+
+    def _action_post_driver_commission(self):
+        for rec in self:
+            if not rec.driver_commission_amount or rec.driver_commission_amount <= 0:
+                continue
+                
+            company = rec.company_id or self.env.company
+            account_id = company.driver_commission_account_id
+            journal_id = company.driver_commission_journal_id
+            
+            if not account_id or not journal_id:
+                # Can't raise here gracefully during a quick save sometimes, but best to raise so user configures it
+                raise ValidationError("Please configure the Driver Commission Account and Journal in Settings.")
+                
+            # Determine analytic account
+            analytic_dict = {}
+            if rec.vehicle_id:
+                truck_reg = rec.vehicle_id.reg_number
+                analytic_acc = self.env['account.analytic.account'].search([('name', '=', truck_reg)], limit=1)
+                if not analytic_acc:
+                    analytic_plan = self.env['account.analytic.plan'].search([], limit=1)
+                    analytic_acc = self.env['account.analytic.account'].create({
+                        'name': truck_reg,
+                        'plan_id': analytic_plan.id if analytic_plan else False,
+                    })
+                if analytic_acc:
+                    analytic_dict = {str(analytic_acc.id): 100}
+                    
+            partner_id = False # Omitting partner_id for simplicity as trucking.driver doesn't link to res.partner in this DB
+
+            move_vals = {
+                'move_type': 'entry',
+                'journal_id': journal_id.id,
+                'date': fields.Date.context_today(self),
+                'ref': f"Commission - {rec.name}",
+                'line_ids': [
+                    (0, 0, {
+                        'name': f"Driver Commission - Load {rec.name}",
+                        'account_id': account_id.id,
+                        'debit': rec.driver_commission_amount,
+                        'credit': 0.0,
+                        'analytic_distribution': analytic_dict,
+                        'partner_id': partner_id,
+                    }),
+                    (0, 0, {
+                        'name': f"Driver Commission - Load {rec.name}",
+                        'account_id': journal_id.default_account_id.id,
+                        'debit': 0.0,
+                        'credit': rec.driver_commission_amount,
+                        'analytic_distribution': analytic_dict,
+                        'partner_id': partner_id,
+                    })
+                ]
+            }
+            
+            if rec.driver_commission_move_id:
+                if rec.driver_commission_move_id.state == 'posted':
+                    rec.driver_commission_move_id.button_draft()
+                rec.driver_commission_move_id.write({'line_ids': [(5, 0, 0)] + move_vals['line_ids']})
+                rec.driver_commission_move_id.action_post()
+            else:
+                move = self.env['account.move'].create(move_vals)
+                move.action_post()
+                rec.driver_commission_move_id = move.id
+
+    @api.constrains('trailer_1_id', 'trailer_2_id')
+    def _check_trailers(self):
+        for rec in self:
+            if rec.trailer_1_id and rec.trailer_2_id and rec.trailer_1_id == rec.trailer_2_id:
+                raise UserError(_("Trailer 1 and Trailer 2 cannot be the same!"))
+
+    @api.constrains('booking_date', 'date_loaded', 'delivery_date')
+    def _check_dates(self):
+        for rec in self:
+            if rec.date_loaded and rec.booking_date and rec.date_loaded.date() < rec.booking_date:
+                raise UserError(_("Date Loaded cannot be before Booking Date."))
+            if rec.delivery_date and rec.date_loaded and rec.delivery_date.date() < rec.date_loaded.date():
+                raise UserError(_("Delivery Date cannot be before Date Loaded."))
 
     @api.model
     def _cron_check_delayed_loading(self):
@@ -226,7 +497,7 @@ class TruckingLoad(models.Model):
                 if n['arrived'] or n['departed']:
                     current_node_idx = i
                     
-            html = '<div style="display: flex; justify-content: space-between; width: 100%; padding: 20px 0; background: #f8f9fa; border-radius: 10px;">'
+            html = '<div style="display: flex; justify-content: space-between; width: 100%; padding: 10px 0; background: #f8f9fa; border-radius: 10px;">'
 
             total = len(nodes)
             for idx, node in enumerate(nodes):
@@ -252,19 +523,19 @@ class TruckingLoad(models.Model):
                     
                 show_truck = (idx == current_node_idx)
                 # Used fa-flip-horizontal so the truck faces right
-                truck_html = '<div style="font-size: 20px; color: #10b981; height: 32px; display: flex; align-items: flex-end; justify-content: center;"><i class="fa fa-truck fa-flip-horizontal"></i></div>' if show_truck else '<div style="height: 32px;"></div>'
+                truck_html = '<div style="font-size: 14px; color: #10b981; height: 24px; display: flex; align-items: flex-end; justify-content: center;"><i class="fa fa-truck fa-flip-horizontal"></i></div>' if show_truck else '<div style="height: 24px;"></div>'
 
                 html += f'<div style="flex: 1; position: relative; text-align: center;">'
                 
                 # Line to the next node
                 if not is_last:
                     line_color = "#10b981" if node['departed'] else "#cbd5e1"
-                    html += f'<div style="position: absolute; top: 49px; left: 50%; width: 100%; height: 4px; background-color: {line_color}; z-index: 0;"></div>'
+                    html += f'<div style="position: absolute; top: 41px; left: 50%; width: 100%; height: 4px; background-color: {line_color}; z-index: 0;"></div>'
                     
                 html += f"""
                     <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1;">
                         {truck_html}
-                        <div style="width: 30px; height: 30px; border-radius: 50%; background-color: {color}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 6px solid #f8f9fa; box-sizing: content-box;">
+                        <div style="width: 20px; height: 20px; border-radius: 50%; background-color: {color}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid #f8f9fa; box-sizing: content-box; font-size: 10px;">
                             {icon}
                         </div>
                         <div style="margin-top: 10px; font-weight: bold; font-size: 14px; word-wrap: break-word; max-width: 90%;">{node['name']}</div>
@@ -328,6 +599,12 @@ class TruckingLoad(models.Model):
             if rec.trailer_1_id and rec.trailer_2_id and rec.trailer_1_id == rec.trailer_2_id:
                 raise ValidationError(_("Trailer is taken on slot 1, choose another trailer or contact transporter to request more information."))
 
+    @api.constrains('fuel_litres', 'fuel_amount', 'fuel_scrap_ids')
+    def _check_fuel_conflict(self):
+        for rec in self:
+            if rec.fuel_amount > 0 and rec.has_issued_fuel:
+                raise ValidationError(_("You cannot enter a manual Fuel Amount (Advance) when Fuel has already been issued via scrapping, and vice versa. Please remove one."))
+
     payment_ids = fields.One2many('account.payment', 'load_id', string='Payments')
 
     @api.depends('total_per_load', 'deposit_amount', 'fuel_amount', 'shortages', 'transporter_bill_id.amount_residual', 'transporter_bill_id.state', 'payment_ids.state', 'payment_ids.amount', 'delivered_qty', 'qty_tonnes', 'rate_per_tonne', 'bill_transporter_qty')
@@ -345,7 +622,7 @@ class TruckingLoad(models.Model):
                 variance_val = (rec.qty_tonnes - rec.delivered_qty) * rec.rate_per_tonne if rec.bill_transporter_qty == 'delivered' else 0.0
                 rec.transporter_balance = rec.total_per_load - variance_val - rec.deposit_amount - rec.fuel_amount - rec.shortages - manual_paid
 
-    @api.depends('invoice_id', 'invoice_id.amount_total', 'invoice_id.amount_residual', 'payment_ids.state', 'payment_ids.amount')
+    @api.depends('invoice_id', 'invoice_id.amount_total', 'invoice_id.amount_residual', 'payment_ids.state', 'payment_ids.amount', 'qty_tonnes', 'customer_rate', 'bill_customer_qty', 'delivered_qty', 'transporter_type')
     def _compute_invoiced_amount(self):
         for rec in self:
             domain = [('load_id', '=', rec.id), ('partner_type', '=', 'customer'), ('state', '!=', 'draft')]
@@ -357,21 +634,27 @@ class TruckingLoad(models.Model):
                 rec.customer_balance = rec.invoice_id.amount_residual
                 rec.paid = rec.invoiced_amount - rec.customer_balance
             else:
-                so_qty = rec.qty_tonnes if rec.bill_customer_qty == 'loaded' else rec.delivered_qty
+                if rec.transporter_type == 'in_house':
+                    so_qty = rec.qty_tonnes
+                else:
+                    so_qty = rec.qty_tonnes if rec.bill_customer_qty == 'loaded' else rec.delivered_qty
                 rec.invoiced_amount = so_qty * rec.customer_rate
                 rec.paid = manual_paid
                 rec.customer_balance = rec.invoiced_amount - rec.paid
 
-    @api.depends('invoiced_amount', 'total_per_load')
+    @api.depends('invoiced_amount', 'total_per_load', 'total_all_expenses', 'transporter_type')
     def _compute_gross_profit(self):
         for rec in self:
-            rec.gross_profit = rec.invoiced_amount - rec.total_per_load
+            if rec.transporter_type == 'in_house':
+                rec.gross_profit = rec.invoiced_amount - rec.total_all_expenses
+            else:
+                rec.gross_profit = rec.invoiced_amount - rec.total_per_load - rec.total_all_expenses
 
     def action_deliver(self):
         for rec in self:
             if not rec.vehicle_id or not rec.trailer_1_id:
                 raise UserError(_("Truck Reg and Trailer 1 Reg are required before proceeding."))
-            if not rec.bill_customer_qty or not rec.bill_transporter_qty:
+            if rec.transporter_type == 'external' and (not rec.bill_customer_qty or not rec.bill_transporter_qty):
                 raise UserError(_("Please choose a Billing Policy before delivering."))
             if rec.state not in ('in_progress', 'overdue'):
                 continue
@@ -379,25 +662,45 @@ class TruckingLoad(models.Model):
             if not rec.delivery_date:
                 raise UserError(_("Please set the Delivery Date before delivering."))
             if not rec.pod:
-                raise UserError(_("Please provide a POD (Proof of Delivery) before delivering."))
-            if rec.delivered_qty <= 0:
+                raise UserError(_("Please attach the POD before delivering."))
+                
+            if rec.transporter_type == 'in_house':
+                if not any(exp.amount > 0 for exp in rec.expense_ids):
+                    raise UserError(_("For In-House loads, you must record at least one expense with an amount greater than zero before delivering."))
+                    
+            if not rec.is_walk_in:
+                if not rec.pod:
+                    raise UserError(_("Please provide a POD (Proof of Delivery) before delivering."))
+            if rec.transporter_type == 'external' and rec.delivered_qty <= 0:
                 raise UserError(_("Please set a valid Delivered Qty before delivering."))
             if rec.customer_rate <= 0:
                 raise UserError(_("Please set a valid Customer Rate in Customer Recovery Details before delivering."))
             if not rec.product_id:
                 raise UserError(_("Please select a Product for billing."))
 
-            # 1. Create Analytic Account
+            # 1. Create/Find Analytic Account
             analytic_plan = self.env['account.analytic.plan'].search([], limit=1)
-            analytic_acc = self.env['account.analytic.account'].create({
-                'name': f"Load {rec.name}",
-                'partner_id': rec.customer_id.id,
-                'plan_id': analytic_plan.id if analytic_plan else False,
-            })
+            if rec.transporter_type == 'in_house' and rec.vehicle_id:
+                truck_reg = rec.vehicle_id.reg_number
+                analytic_acc = self.env['account.analytic.account'].search([('name', '=', truck_reg)], limit=1)
+                if not analytic_acc:
+                    analytic_acc = self.env['account.analytic.account'].create({
+                        'name': truck_reg,
+                        'plan_id': analytic_plan.id if analytic_plan else False,
+                    })
+            else:
+                analytic_acc = self.env['account.analytic.account'].create({
+                    'name': f"Load {rec.name}",
+                    'partner_id': rec.customer_id.id,
+                    'plan_id': analytic_plan.id if analytic_plan else False,
+                })
             rec.analytic_account_id = analytic_acc.id
 
             # 2. Create Sales Order
-            so_qty = rec.qty_tonnes if rec.bill_customer_qty == 'loaded' else rec.delivered_qty
+            if rec.transporter_type == 'in_house':
+                so_qty = rec.qty_tonnes
+            else:
+                so_qty = rec.qty_tonnes if rec.bill_customer_qty == 'loaded' else rec.delivered_qty
             so = self.env['sale.order'].create({
                 'partner_id': rec.customer_id.id,
                 'order_line': [(0, 0, {
@@ -418,6 +721,9 @@ class TruckingLoad(models.Model):
             # Create Invoice from SO if not already created by automation
             if not so.invoice_ids:
                 invoice = so._create_invoices()
+                if analytic_acc:
+                    for line in invoice.invoice_line_ids:
+                        line.analytic_distribution = {str(analytic_acc.id): 100}
                 invoice.action_post()
             else:
                 invoice = so.invoice_ids[0]
@@ -445,78 +751,93 @@ class TruckingLoad(models.Model):
                                         logging.getLogger(__name__).error(f"Reconciliation error: {e}")
                                         pass
 
-            po_qty = rec.qty_tonnes if rec.bill_transporter_qty == 'loaded' else rec.delivered_qty
+            if rec.transporter_type == 'external':
+                po_qty = rec.qty_tonnes if rec.bill_transporter_qty == 'loaded' else rec.delivered_qty
 
-            po_lines = [(0, 0, {
-                'product_id': rec.product_id.id,
-                'name': f"Freight Load {rec.name}",
-                'product_qty': po_qty,
-                'qty_received': po_qty,
-                'price_unit': rec.rate_per_tonne,
-                'tax_ids': False,
-                'analytic_distribution': {str(analytic_acc.id): 100} if analytic_acc else False,
-            })]
-            
-            if rec.shortages > 0:
-                po_lines.append((0, 0, {
+                po_lines = [(0, 0, {
                     'product_id': rec.product_id.id,
-                    'name': f"Shortages Deduction - Load {rec.name}",
-                    'product_qty': 1,
-                    'qty_received': 1,
-                    'price_unit': -rec.shortages,
+                    'name': f"Freight Load {rec.name}",
+                    'product_qty': po_qty,
+                    'qty_received': po_qty,
+                    'price_unit': rec.rate_per_tonne,
                     'tax_ids': False,
                     'analytic_distribution': {str(analytic_acc.id): 100} if analytic_acc else False,
-                }))
+                })]
                 
-            po = self.env['purchase.order'].create({
-                'partner_id': rec.transporter_id.id,
-                'order_line': po_lines
-            })
-            if po.state in ('draft', 'sent', 'to approve'):
-                po.button_confirm()
+                if rec.shortages > 0:
+                    po_lines.append((0, 0, {
+                        'product_id': rec.product_id.id,
+                        'name': f"Shortages Deduction - Load {rec.name}",
+                        'product_qty': 1,
+                        'qty_received': 1,
+                        'price_unit': -rec.shortages,
+                        'tax_ids': False,
+                        'analytic_distribution': {str(analytic_acc.id): 100} if analytic_acc else False,
+                    }))
+                    
+                po = self.env['purchase.order'].create({
+                    'partner_id': rec.transporter_id.id,
+                    'order_line': po_lines
+                })
+                if po.state in ('draft', 'sent', 'to approve'):
+                    po.button_confirm()
+                    
+                rec.purchase_order_id = po.id
                 
-            rec.purchase_order_id = po.id
-            
-            # Create Bill if not already created by automation
-            if not po.invoice_ids:
-                po.action_create_invoice()
-            
-            bill = po.invoice_ids[0] if po.invoice_ids else False
-            
-            if bill:
-                if bill.state == 'draft':
-                    bill.invoice_date = rec.delivery_date
-                    bill.ref = rec.name
-                    bill.action_post()
+                # Create Bill if not already created by automation
+                if not po.invoice_ids:
+                    po.action_create_invoice()
                 
-                rec.transporter_bill_id = bill.id
+                bill = po.invoice_ids[0] if po.invoice_ids else False
+                
+                if bill:
+                    if bill.state == 'draft':
+                        bill.invoice_date = rec.delivery_date
+                        bill.ref = rec.name
+                        if analytic_acc:
+                            for line in bill.invoice_line_ids:
+                                line.analytic_distribution = {str(analytic_acc.id): 100}
+                        bill.action_post()
+                    
+                    rec.transporter_bill_id = bill.id
 
-                payable_account = bill.line_ids.filtered(lambda l: l.account_id.account_type == 'liability_payable')
-                if payable_account:
-                    payable_account = payable_account[0].account_id
-                    domain = [('load_id', '=', rec.id), ('partner_type', '=', 'supplier'), ('state', '!=', 'draft')]
-                    supplier_payments = self.env['account.payment'].search(domain)
-                    for payment in supplier_payments:
-                        if payment.move_id:
-                            payment_lines = payment.move_id.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
-                            for line in payment_lines:
-                                bill_lines = bill.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
-                                if bill_lines:
-                                    try:
-                                        (bill_lines[0] | line).reconcile()
-                                    except Exception as e:
-                                        import logging
-                                        logging.getLogger(__name__).error(f"Reconciliation error: {e}")
-                                        pass
+                    payable_account = bill.line_ids.filtered(lambda l: l.account_id.account_type == 'liability_payable')
+                    if payable_account:
+                        payable_account = payable_account[0].account_id
+                        domain = [('load_id', '=', rec.id), ('partner_type', '=', 'supplier'), ('state', '!=', 'draft')]
+                        supplier_payments = self.env['account.payment'].search(domain)
+                        for payment in supplier_payments:
+                            if payment.move_id:
+                                payment_lines = payment.move_id.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
+                                for line in payment_lines:
+                                    bill_lines = bill.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
+                                    if bill_lines:
+                                        try:
+                                            (bill_lines[0] | line).reconcile()
+                                        except Exception as e:
+                                            import logging
+                                            logging.getLogger(__name__).error(f"Reconciliation error: {e}")
+                                            pass
             
             rec.state = 'invoiced'
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Success',
+                    'message': 'Invoices generated successfully!',
+                    'type': 'success',
+                    'sticky': False,
+                    'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+                }
+            }
 
     def action_confirm_load(self):
         for rec in self:
             if not rec.vehicle_id or not rec.trailer_1_id:
                 raise UserError(_("Truck Reg and Trailer 1 Reg are required before proceeding."))
             today = fields.Date.context_today(self)
-            if rec.date_loaded and rec.date_loaded > today:
+            if rec.date_loaded and rec.date_loaded.date() > today:
                 rec.state = 'upcoming'
             else:
                 rec.state = 'in_progress'
@@ -528,7 +849,7 @@ class TruckingLoad(models.Model):
                 deposit_ok = rec.deposit_approval_state in ('none', 'approved')
                 if fuel_ok and deposit_ok and (rec.fuel_approval_state == 'approved' or rec.deposit_approval_state == 'approved'):
                     today = fields.Date.context_today(self)
-                    if rec.date_loaded and rec.date_loaded > today:
+                    if rec.date_loaded and rec.date_loaded.date() > today:
                         rec.state = 'upcoming'
                     else:
                         rec.state = 'in_progress'
@@ -690,24 +1011,33 @@ class TruckingLoad(models.Model):
         delivered_on_time = len(loads.filtered(lambda l: l.state in ('delivered', 'invoiced') and l.delivery_date and l.expected_delivery_date and l.delivery_date <= l.expected_delivery_date))
         delayed_deliveries = len(loads.filtered(lambda l: l.state in ('delivered', 'invoiced') and l.delivery_date and l.expected_delivery_date and l.delivery_date > l.expected_delivery_date))
         
-        trucking_product_id = self.env.ref('trucking.product_trucking_service', raise_if_not_found=False)
-        if trucking_product_id:
-            # For invoices, we might want to apply date_filter on invoice_date, but let's keep simple for now
-            invoice_domain = [
-                ('move_type', '=', 'out_invoice'),
-                ('state', '=', 'posted'),
-                ('invoice_line_ids.product_id', '=', trucking_product_id.id)
-            ]
-            if date_filter != 'all':
-                invoice_domain.append(('invoice_date', '>=', start_date))
-            total_invoices = self.env['account.move'].search_count(invoice_domain)
-        else:
-            total_invoices = len(loads.filtered(lambda l: l.state == 'invoiced'))
-            
-        gross_profit = sum(loads.mapped('gross_profit'))
-        total_load_value = sum(loads.mapped('total_per_load'))
+        # Accounting metrics for Revenue, Net Profit, and Cost
+        aml_domain = [('parent_state', '=', 'posted'), ('account_id.internal_group', 'in', ['income', 'expense'])]
+        if date_filter != 'all':
+            aml_domain.append(('date', '>=', start_date))
         
-        overdue_loads = all_loads.filtered(lambda l: l.state in ['draft', 'in_progress', 'overdue', 'pending_approval', 'rejected', 'upcoming'] and l.expected_delivery_date and l.expected_delivery_date < today)
+        amls = self.env['account.move.line'].search(aml_domain)
+        
+        total_revenue = 0.0
+        total_expense = 0.0
+        
+        for aml in amls:
+            if aml.account_id.internal_group == 'income':
+                total_revenue += (aml.credit - aml.debit)
+            elif aml.account_id.internal_group == 'expense':
+                total_expense += (aml.debit - aml.credit)
+                
+        net_profit = total_revenue - total_expense
+        cost = total_expense
+        
+        total_invoices = cost
+        gross_profit = net_profit
+        total_load_value = total_revenue
+        
+        overdue_loads = all_loads.filtered(lambda l: 
+            (l.transporter_type == 'in_house' and l.state in ('delivered', 'invoiced') and not l.pod_confirmed) or
+            (l.transporter_type != 'in_house' and l.state in ['draft', 'in_progress', 'overdue', 'pending_approval', 'rejected', 'upcoming'] and l.expected_delivery_date and l.expected_delivery_date.date() < today)
+        )
         
         overdue_list = [{
             'id': l.id,
@@ -773,13 +1103,13 @@ class TruckingLoad(models.Model):
         } for l in recent_loads]
 
         # Upcoming Deliveries: All future deliveries
-        upcoming = all_loads.filtered(lambda l: l.state in ['draft', 'in_progress', 'pending_approval', 'upcoming'] and l.expected_delivery_date and l.expected_delivery_date >= today)
+        upcoming = all_loads.filtered(lambda l: l.state in ['draft', 'in_progress', 'pending_approval', 'upcoming'] and l.expected_delivery_date and l.expected_delivery_date.date() >= today)
         upcoming_list = [{
             'id': l.id,
             'name': l.name,
             'customer': l.customer_id.name,
             'date': l.expected_delivery_date.strftime('%Y-%m-%d'),
-            'days_left': (l.expected_delivery_date - today).days
+            'days_left': (l.expected_delivery_date.date() - today).days
         } for l in upcoming.sorted('expected_delivery_date')[:30]]
 
         return {
@@ -800,3 +1130,50 @@ class TruckingLoad(models.Model):
             'live_feed': live_feed,
             'upcoming_deliveries': upcoming_list
         }
+
+    def action_create_consolidated_invoice(self):
+        for rec in self:
+            pass
+        if not self:
+            return
+            
+        customers = self.mapped('customer_id')
+        if len(customers) > 1:
+            raise UserError("You can only create a consolidated invoice for loads belonging to the SAME customer.")
+            
+        unconfirmed_pods = self.filtered(lambda l: not l.pod_confirmed)
+        if unconfirmed_pods:
+            raise UserError(f"The following loads do not have confirmed PODs: {', '.join(unconfirmed_pods.mapped('name'))}")
+            
+        invoice_vals = {
+            'move_type': 'out_invoice',
+            'partner_id': customers[0].id,
+            'invoice_line_ids': [],
+        }
+        
+        for load in self:
+            line_vals = {
+                'name': f"Load {load.name} - {load.route_id.name}" if load.route_id else f"Load {load.name}",
+                'quantity': load.qty_tonnes or 1.0,
+                'price_unit': load.customer_rate,
+                'tax_ids': [(5, 0, 0)],  # Explicitly clear taxes
+                'trucking_order_no': load.name,
+                'trucking_route_name': load.route_id.name if load.route_id else '',
+            }
+            if load.product_id:
+                line_vals['product_id'] = load.product_id.id
+                
+            invoice_vals['invoice_line_ids'].append((0, 0, line_vals))
+            
+        invoice = self.env['account.move'].create(invoice_vals)
+        
+        self.write({'invoice_id': invoice.id, 'state': 'invoiced'})
+        
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'res_id': invoice.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_trucking_profitability_list" model="ir.ui.view">
+        <field name="name">trucking.customer.profitability.list</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <list string="Profitability Analysis">
+                <field name="customer_id" optional="show"/>
+                <field name="vehicle_id" optional="show"/>
+                <field name="load_id" optional="show"/>
+                <field name="date_loaded" optional="show"/>
+                <field name="load_count" sum="Total Loads" optional="show"/>
+                <field name="invoiced_amount" sum="Total Revenue" optional="show"/>
+                <field name="total_cost" sum="Total Costs" optional="show"/>
+                <field name="expense_amount" sum="Total Expenses" optional="hide"/>
+                <field name="net_profit" sum="Gross Profit" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_trucking_profitability_search" model="ir.ui.view">
+        <field name="name">trucking.customer.profitability.search</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <search string="Search Profitability">
+                <field name="customer_id"/>
+                <field name="vehicle_id"/>
+                <field name="load_id"/>
+                <filter string="Customer" name="group_by_customer" context="{'group_by': 'customer_id'}"/>
+                <filter string="Truck" name="group_by_vehicle" context="{'group_by': 'vehicle_id'}"/>
+                <filter string="Load" name="group_by_load" context="{'group_by': 'load_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_trucking_profitability_pivot" model="ir.ui.view">
+        <field name="name">trucking.customer.profitability.pivot</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <pivot string="Profitability Analysis" sample="1" display_quantity="1">
+                <field name="customer_id" type="row"/>
+                <field name="date_loaded" type="col" interval="month"/>
+                <field name="load_count" type="measure" string="Loads"/>
+                <field name="invoiced_amount" type="measure"/>
+                <field name="total_cost" type="measure"/>
+                <field name="net_profit" type="measure" string="Gross Profit"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_trucking_profitability_graph" model="ir.ui.view">
+        <field name="name">trucking.customer.profitability.graph</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <graph string="Profitability Analysis" sample="1">
+                <field name="customer_id"/>
+                <field name="net_profit" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_trucking_profitability_report" model="ir.actions.act_window">
+        <field name="name">Customer Profitability</field>
+        <field name="res_model">trucking.customer.profitability</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="context">{'search_default_group_by_customer': 1}</field>
+    </record>
+
+    <!-- Truck Profitability Views -->
+    <record id="view_trucking_truck_profitability_pivot" model="ir.ui.view">
+        <field name="name">trucking.truck.profitability.pivot</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <pivot string="Truck Profitability" sample="1" display_quantity="1">
+                <field name="vehicle_id" type="row"/>
+                <field name="date_loaded" type="col" interval="month"/>
+                <field name="load_count" type="measure" string="Loads"/>
+                <field name="invoiced_amount" type="measure" string="Revenue"/>
+                <field name="total_cost" type="measure" string="Costs"/>
+                <field name="expense_amount" type="measure" string="Expenses"/>
+                <field name="net_profit" type="measure" string="Gross Profit"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_trucking_truck_profitability_graph" model="ir.ui.view">
+        <field name="name">trucking.truck.profitability.graph</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <graph string="Truck Profitability" sample="1">
+                <field name="vehicle_id"/>
+                <field name="net_profit" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_trucking_truck_profitability_report" model="ir.actions.act_window">
+        <field name="name">Truck Profitability</field>
+        <field name="res_model">trucking.customer.profitability</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="context">{'search_default_group_by_vehicle': 1}</field>
+    </record>
+
+    <!-- Order Profitability Views -->
+    <record id="view_trucking_order_profitability_pivot" model="ir.ui.view">
+        <field name="name">trucking.order.profitability.pivot</field>
+        <field name="model">trucking.customer.profitability</field>
+        <field name="arch" type="xml">
+            <pivot string="Order Profitability" sample="1" display_quantity="1">
+                <field name="load_id" type="row"/>
+                <field name="date_loaded" type="col" interval="month"/>
+                <field name="invoiced_amount" type="measure" string="Revenue"/>
+                <field name="total_cost" type="measure" string="Costs"/>
+                <field name="expense_amount" type="measure" string="Expenses"/>
+                <field name="net_profit" type="measure" string="Gross Profit"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_trucking_order_profitability_report" model="ir.actions.act_window">
+        <field name="name">Order Profitability</field>
+        <field name="res_model">trucking.customer.profitability</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="context">{'search_default_group_by_load': 1}</field>
+    </record>
+
+    <record id="action_truck_profitability_list_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_trucking_profitability_list"/>
+        <field name="act_window_id" ref="action_trucking_truck_profitability_report"/>
+    </record>
+
+    <record id="action_truck_profitability_pivot_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">pivot</field>
+        <field name="view_id" ref="view_trucking_truck_profitability_pivot"/>
+        <field name="act_window_id" ref="action_trucking_truck_profitability_report"/>
+    </record>
+
+    <record id="action_truck_profitability_graph_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">graph</field>
+        <field name="view_id" ref="view_trucking_truck_profitability_graph"/>
+        <field name="act_window_id" ref="action_trucking_truck_profitability_report"/>
+    </record>
+</odoo>

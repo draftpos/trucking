@@ -1,15 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
-    <!-- Trucking Route -->
+    
     <record id="view_trucking_route_tree" model="ir.ui.view">
         <field name="name">trucking.route.tree</field>
         <field name="model">trucking.route</field>
         <field name="arch" type="xml">
             <list string="Routes" editable="bottom">
-                <field name="source"/>
-                <field name="destination"/>
-                <field name="name" readonly="1"/>
-                <field name="distance"/>
+                <field name="source" optional="show" />
+                <field name="destination" optional="show" />
+                <field name="name" readonly="1" optional="show" />
+                <field name="distance" optional="show" />
             </list>
         </field>
     </record>
@@ -22,19 +22,19 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="source"/>
-                            <field name="destination"/>
-                            <field name="name" readonly="1"/>
-                            <field name="distance"/>
-                            <field name="is_cross_border"/>
+                            <field name="source" />
+                            <field name="destination" />
+                            <field name="name" readonly="1" />
+                            <field name="distance" />
+                            <field name="is_cross_border" />
                         </group>
                     </group>
                     <notebook invisible="not is_cross_border">
                         <page string="Borders" name="borders">
                             <field name="border_ids">
                                 <list editable="bottom">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="border_id"/>
+                                    <field name="sequence" widget="handle" optional="show" />
+                                    <field name="border_id" optional="show" />
                                 </list>
                             </field>
                         </page>

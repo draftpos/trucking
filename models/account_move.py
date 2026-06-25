@@ -1,7 +1,22 @@
-from odoo import models, api
+from odoo import models, fields, api
 
 class AccountMove(models.Model):
     _inherit = 'account.move'
+
+    trucking_load_ids = fields.One2many('trucking.load', 'invoice_id', string='Trucking Loads')
+    trucking_bill_load_ids = fields.One2many('trucking.load', 'transporter_bill_id', string='Trucking Bill Loads')
+    pod = fields.Char(string='POD', compute='_compute_pod_details')
+    pod_date = fields.Date(string='POD Date', compute='_compute_pod_details')
+
+    def _compute_pod_details(self):
+        for move in self:
+            load = move.trucking_load_ids[:1] or move.trucking_bill_load_ids[:1]
+            if load:
+                move.pod = load.pod
+                move.pod_date = load.pod_date
+            else:
+                move.pod = False
+                move.pod_date = False
 
     def _compute_payments_widget_to_reconcile_info(self):
         super()._compute_payments_widget_to_reconcile_info()
@@ -41,3 +56,9 @@ class AccountMove(models.Model):
                             move.invoice_outstanding_credits_debits_widget = False
                         else:
                             move.invoice_outstanding_credits_debits_widget = vals
+
+class AccountMoveLine(models.Model):
+    _inherit = 'account.move.line'
+
+    trucking_order_no = fields.Char(string="Order No")
+    trucking_route_name = fields.Char(string="Route")

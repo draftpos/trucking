@@ -3,7 +3,16 @@ access_trucking_load,trucking.load,model_trucking_load,base.group_user,1,1,1,1
 access_trucking_vehicle,trucking.vehicle,model_trucking_vehicle,base.group_user,1,1,1,1
 access_trucking_route,trucking.route,model_trucking_route,base.group_user,1,1,1,1
 access_trucking_reject_wizard,trucking.reject.wizard,model_trucking_reject_wizard,base.group_user,1,1,1,1
+access_trucking_receive_fuel_wizard,access_trucking_receive_fuel_wizard,model_trucking_receive_fuel_wizard,base.group_user,1,1,1,1
 access_trucking_trailer,trucking.trailer,model_trucking_trailer,base.group_user,1,1,1,1
+access_trucking_default_expense,trucking.default.expense,model_trucking_default_expense,base.group_user,1,1,1,1
 access_trucking_border,trucking.border,model_trucking_border,base.group_user,1,1,1,1
 access_trucking_route_border,trucking.route.border,model_trucking_route_border,base.group_user,1,1,1,1
 access_trucking_load_border,trucking.load.border,model_trucking_load_border,base.group_user,1,1,1,1
+access_trucking_driver,trucking.driver,model_trucking_driver,base.group_user,1,1,1,1
+access_trucking_load_expense,trucking.load.expense,model_trucking_load_expense,base.group_user,1,1,1,1
+access_trucking_customer_profitability,trucking.customer.profitability,model_trucking_customer_profitability,base.group_user,1,0,0,0
+access_trucking_fuel_wizard,trucking.fuel.wizard,model_trucking_fuel_wizard,trucking.group_trucking_user,1,1,1,1
+access_payment_load_warning_wizard,payment.load.warning.wizard,model_payment_load_warning_wizard,base.group_user,1,1,1,1
+access_trucking_zero_confirm_wizard,trucking.zero.confirm.wizard,model_trucking_zero_confirm_wizard,base.group_user,1,1,1,1
+
