@@ -140,7 +140,6 @@
                                 <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
                                     <h4 class="text-primary mb-3">Payment Details</h4>
                                     <group>
-                                        <field name="pol" invisible="transporter_type == 'in_house'" />
                                         <field name="deposit_amount" widget="monetary" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and deposit_approval_state in ('requested', 'approved'))" />
                                         
                                         <!-- Separate Deposit Fields -->
