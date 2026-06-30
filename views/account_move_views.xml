@@ -23,4 +23,36 @@
             </xpath>
         </field>
     </record>
+
+    <record id="view_trucking_driver_commission_bill_tree" model="ir.ui.view">
+        <field name="name">account.move.driver.commission.tree</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_in_invoice_tree"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_partner_display_name']" position="attributes">
+                <attribute name="string">Driver</attribute>
+            </xpath>
+            <xpath expr="//header" position="inside">
+                <button name="action_register_payment" type="object" string="Pay" class="oe_highlight" groups="account.group_account_invoice" invisible="0"/>
+            </xpath>
+            <xpath expr="//field[@name='invoice_date']" position="after">
+                <field name="trucking_load_id" string="Load" />
+                <field name="trucking_route_id" string="Route" />
+                <field name="trucking_vehicle_id" string="Truck Reg" />
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_trucking_pay_driver_commissions" model="ir.actions.server">
+        <field name="name">Register Payment</field>
+        <field name="model_id" ref="account.model_account_move"/>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+            if records:
+                action = records.action_register_payment()
+        </field>
+    </record>
 </odoo>

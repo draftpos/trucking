@@ -10,7 +10,7 @@ class TruckingCustomerProfitability(models.Model):
     customer_id = fields.Many2one('res.partner', string='Customer', readonly=True)
     transporter_id = fields.Many2one('res.partner', string='Transporter', readonly=True)
     vehicle_id = fields.Many2one('trucking.vehicle', string='Truck', readonly=True)
-    driver_id = fields.Many2one('trucking.driver', string='Driver', readonly=True)
+    driver_id = fields.Many2one('res.partner', string='Driver', readonly=True)
     date_loaded = fields.Date(string='Date Loaded', readonly=True)
     delivery_date = fields.Date(string='Delivery Date', readonly=True)
     state = fields.Selection([

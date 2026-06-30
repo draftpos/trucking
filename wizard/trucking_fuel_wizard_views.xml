@@ -12,9 +12,13 @@
                 <sheet>
                     <group>
                         <field name="load_id" invisible="1"/>
+                        <field name="allow_supplier" invisible="1"/>
+                        <field name="supplier_id" invisible="not allow_supplier"/>
                         <field name="qty"/>
                         <field name="cost_price"/>
+                        <field name="issue_price"/>
                         <field name="total_cost"/>
+                        <field name="total_selling"/>
                     </group>
                 </sheet>
                 <footer>

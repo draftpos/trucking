@@ -20,6 +20,12 @@ class ResPartner(models.Model):
     load_count = fields.Integer(string='Load Count', compute='_compute_load_stats')
     current_month_profit = fields.Monetary(string='Current Month Profit', compute='_compute_load_stats', currency_field='currency_id')
 
+    is_driver = fields.Boolean(string="Is a Driver", default=False)
+    driver_license = fields.Char(string="Driver License Number")
+    driver_loads_count = fields.Integer(string='Driver Loads', compute='_compute_driver_stats')
+    driver_commission_count = fields.Integer(string='Driver Commissions', compute='_compute_driver_stats')
+
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -72,6 +78,14 @@ class ResPartner(models.Model):
             )
             partner.current_month_profit = sum(current_month_loads.mapped('gross_profit'))
 
+    def _compute_driver_stats(self):
+        for partner in self:
+            loads = self.env['trucking.load'].search([('driver_id', '=', partner.id), ('state', 'not in', ['draft', 'cancelled'])])
+            partner.driver_loads_count = len(loads)
+            
+            commissions = self.env['account.move'].search([('partner_id', '=', partner.id), ('move_type', '=', 'in_invoice'), ('trucking_load_id', '!=', False)])
+            partner.driver_commission_count = len(commissions)
+
     def action_view_trucking_loads(self):
         self.ensure_one()
         return {
@@ -82,3 +96,26 @@ class ResPartner(models.Model):
             'domain': [('customer_id', '=', self.id)],
             'context': {'default_customer_id': self.id},
         }
+
+    def action_view_driver_loads(self):
+        self.ensure_one()
+        return {
+            'name': _('Driver Loads'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'trucking.load',
+            'view_mode': 'list,form',
+            'domain': [('driver_id', '=', self.id)],
+            'context': {'default_driver_id': self.id},
+        }
+
+    def action_view_driver_commissions(self):
+        self.ensure_one()
+        return {
+            'name': _('Driver Commissions'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'view_mode': 'list,form',
+            'domain': [('partner_id', '=', self.id), ('move_type', '=', 'in_invoice'), ('trucking_load_id', '!=', False)],
+            'context': {'default_partner_id': self.id, 'default_move_type': 'in_invoice'},
+        }
+

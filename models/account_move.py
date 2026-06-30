@@ -3,6 +3,29 @@ from odoo import models, fields, api
 class AccountMove(models.Model):
     _inherit = 'account.move'
 
+    trucking_load_id = fields.Many2one('trucking.load', string='Trucking Load')
+    trucking_vehicle_id = fields.Many2one('trucking.vehicle', string='Truck Reg')
+    trucking_route_id = fields.Many2one('trucking.route', string='Route')
+
+    @api.onchange('trucking_load_id')
+    def _onchange_trucking_load_id(self):
+        if self.trucking_load_id:
+            load = self.trucking_load_id
+            self.partner_id = load.customer_id.id
+            if not self.invoice_line_ids:
+                if load.transporter_type == 'in_house':
+                    qty = load.qty_tonnes
+                else:
+                    qty = load.qty_tonnes if load.bill_customer_qty == 'loaded' else load.delivered_qty
+                self.invoice_line_ids = [(0, 0, {
+                    'product_id': load.product_id.id,
+                    'name': f"Load {load.name} - {load.route_id.name if load.route_id else ''}",
+                    'quantity': qty,
+                    'price_unit': load.customer_rate,
+                    'analytic_distribution': load._get_load_analytic_distribution(),
+                })]
+
+
     trucking_load_ids = fields.One2many('trucking.load', 'invoice_id', string='Trucking Loads')
     trucking_bill_load_ids = fields.One2many('trucking.load', 'transporter_bill_id', string='Trucking Bill Loads')
     pod = fields.Char(string='POD', compute='_compute_pod_details')

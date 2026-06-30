@@ -43,18 +43,8 @@ class TruckingLoadExpense(models.Model):
                     'type': 'service',
                 })
                 
-            # 1. Analytic Account from Truck Reg
-            analytic_dict = False
-            truck_reg = rec.load_id.vehicle_id.reg_number if rec.load_id.vehicle_id else False
-            if truck_reg:
-                analytic_acc = self.env['account.analytic.account'].search([('name', '=', truck_reg)], limit=1)
-                if not analytic_acc:
-                    analytic_plan = self.env['account.analytic.plan'].search([], limit=1)
-                    analytic_acc = self.env['account.analytic.account'].create({
-                        'name': truck_reg,
-                        'plan_id': analytic_plan.id if analytic_plan else False,
-                    })
-                analytic_dict = {str(analytic_acc.id): 100}
+            # 1. Analytic Account from Load Strategy
+            analytic_dict = rec.load_id._get_load_analytic_distribution()
 
             expense_vals = {
                 'name': rec.doc_no or f"Expense for Load {rec.load_id.name} ({rec.supplier_id.name})",

@@ -1,8 +1,9 @@
+from . import trucking_mandatory_field
 from . import stock_scrap
 from . import trucking_route
 from . import trucking_border
 from . import trucking_vehicle
-from . import trucking_driver
+
 from . import trucking_load_expense
 
 from . import account_payment

@@ -22,3 +22,61 @@ class ResCompany(models.Model):
         string='Receive Fuel Journal',
         domain="[('type', 'in', ['general', 'bank', 'cash'])]"
     )
+
+    # Fuel Settings
+    trucking_allow_supplier_on_issue_fuel = fields.Boolean("Allow Supplier on Issue Fuel")
+    trucking_allow_zero_advance = fields.Boolean("Allow Zero Value Advance Requests", default=False)
+    trucking_enable_issue_fuel = fields.Boolean("Activate Issue Fuel Feature", default=True)
+    trucking_allow_fuel_adjustments = fields.Boolean("Allow Fuel Adjustments")
+    trucking_in_house_fuel_process = fields.Selection([
+        ('scrap', 'Deduct from Inventory (Scrap)'),
+        ('bill', 'Direct Billing (Vendor Bill)')
+    ], string='In-House Fuel Process', default='scrap')
+    trucking_external_fuel_process = fields.Selection([
+        ('scrap', 'Deduct from Inventory + Bill Transporter'),
+        ('bill', 'Direct Billing (Supplier Bill + Transporter Bill)')
+    ], string='External Fuel Process', default='scrap')
+    
+    # Analytic Settings
+    trucking_analytic_strategy = fields.Selection([
+        ('truck', 'By Truck Registration'),
+        ('transporter_type', 'By Transporter Type (In-House vs External)'),
+        ('both', 'Both Truck and Transporter Type')
+    ], string='Analytic Accounting Strategy', default='both')
+    
+    # Label Settings
+    trucking_pod_label = fields.Char("POD Label", default="POD")
+    
+    # Auto Invoice
+    trucking_auto_create_invoice = fields.Boolean("Auto-create Sales Invoice on Delivery", default=True)
+    
+    # Penalties
+    trucking_enable_driver_penalties = fields.Boolean("Enable Driver Penalties")
+    
+    # Commission Timing
+    trucking_commission_calc_trigger = fields.Selection([
+        ('delivery', 'Upon Delivery'),
+        ('invoice', 'Upon Invoicing/Accounting')
+    ], string="Commission Calculation Trigger", default='delivery')
+
+    # Approval Workflow
+    trucking_approval_workflow = fields.Selection([
+        ('combined', 'Combined Advance Approval'),
+        ('separate', 'Separate Deposit and Fuel Approvals')
+    ], string="Approval Workflow", default='combined')
+
+
+    # Driver Commission Defaults
+    trucking_default_commission_type = fields.Selection([
+        ('fixed', 'Fixed Amount'),
+        ('percentage', 'Percentage of Net Profit')
+    ], string="Default Commission Type", default='percentage')
+    trucking_default_commission_percentage = fields.Float("Default Commission Percentage (%)", default=10.0)
+    trucking_default_commission_fixed = fields.Monetary("Default Fixed Commission", currency_field='currency_id', default=0.0)
+    trucking_default_driver_commission_product_id = fields.Many2one(
+        'product.product', 
+        string='Default Driver Commission Product',
+        domain="[('type', '=', 'service')]"
+    )
+
+    trucking_mandatory_field_ids = fields.One2many('trucking.mandatory.field', 'company_id', string='Mandatory Fields')

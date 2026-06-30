@@ -10,10 +10,10 @@
                 <field name="delivery_date" optional="show" />
                 <field name="pod" optional="show" />
                 <field name="pod_date" optional="show" readonly="1" />
-                <field name="customer_id" optional="show" />
+                
                 <field name="total_commission" string="Driver Com" optional="show" />
                 <field name="product_id" string="Cargo" optional="show" />
-                <field name="route_id" optional="show" />
+                
                 <field name="transporter_balance_display" optional="show" />
                 <field name="customer_balance" optional="show" />
                 <field name="gross_profit" optional="show" />
@@ -28,20 +28,68 @@
         <field name="arch" type="xml">
             <form string="Load">
                 <header>
-                    <button name="action_request_fuel_approval" string="Request Fuel Approval" type="object" class="oe_highlight" invisible="state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or fuel_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
-                    <button name="action_approve_fuel" string="Approve Fuel" type="object" class="btn-success" invisible="fuel_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_fuel_approver" />
-                    <button name="action_reject_fuel" string="Reject Fuel" type="object" class="btn-danger" invisible="fuel_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_fuel_approver" />
+                    <button name="%(action_trucking_receive_fuel_wizard)d" string="Receive Fuel" type="action" class="btn-secondary" invisible="state in ('draft', 'delivered', 'invoiced')" groups="trucking.group_trucking_issue_fuel"/>
+                    
+                    <!-- Combined Advance Approvals -->
+                    <button name="action_request_advance_approval" string="Request Advance Approval" type="object" class="oe_highlight" invisible="trucking_approval_workflow == 'separate' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or advance_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
+                    <button name="action_approve_advance" string="Approve Advance" type="object" class="btn-success" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver,trucking.group_trucking_fuel_approver" />
+                    <button name="action_reject_advance" string="Reject Advance" type="object" class="btn-danger" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver,trucking.group_trucking_fuel_approver" />
 
-                    <button name="action_request_deposit_approval" string="Request Deposit Approval" type="object" class="oe_highlight" invisible="state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or deposit_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
-                    <button name="action_approve_deposit" string="Approve Deposit" type="object" class="btn-success" invisible="deposit_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver" />
-                    <button name="action_reject_deposit" string="Reject Deposit" type="object" class="btn-danger" invisible="deposit_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver" />
+                    <!-- Separate Approvals -->
+                    <button name="action_request_fuel_approval" string="Request Fuel Approval" type="object" class="oe_highlight" invisible="trucking_approval_workflow == 'combined' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or fuel_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
+                    <button name="action_approve_fuel" string="Approve Fuel" type="object" class="btn-success" invisible="trucking_approval_workflow == 'combined' or fuel_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_fuel_approver" />
+                    <button name="action_reject_fuel" string="Reject Fuel" type="object" class="btn-danger" invisible="trucking_approval_workflow == 'combined' or fuel_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_fuel_approver" />
+
+                    <button name="action_request_deposit_approval" string="Request Deposit Approval" type="object" class="oe_highlight" invisible="trucking_approval_workflow == 'combined' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or deposit_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
+                    <button name="action_approve_deposit" string="Approve Deposit" type="object" class="btn-success" invisible="trucking_approval_workflow == 'combined' or deposit_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver" />
+                    <button name="action_reject_deposit" string="Reject Deposit" type="object" class="btn-danger" invisible="trucking_approval_workflow == 'combined' or deposit_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver" />
 
                     <button name="action_deliver" string="Deliver" type="object" class="btn-success" invisible="state not in ('in_progress', 'overdue')" />
                     <button name="action_confirm_load" string="Confirm Load" type="object" class="oe_highlight" invisible="state != 'draft'" />
                     <field name="state" widget="statusbar" statusbar_visible="draft,upcoming,in_progress,delivered,invoiced" />
                 </header>
                 <sheet>
+                    <div class="alert alert-info text-center" role="alert" invisible="not has_issued_fuel" style="margin-bottom: 10px;">
+                        <strong>Fuel Issued</strong> on <field name="fuel_issue_date" readonly="1"/> by <field name="fuel_issue_user_id" readonly="1" widget="many2one_avatar_user"/>
+                    </div>
+                    <field name="trucking_approval_workflow" invisible="1" />
+                    <field name="mandatory_fields_json" invisible="1" />
                     <widget name="web_ribbon" title="DELAYED LOADING" bg_color="text-bg-danger" invisible="not is_delayed_loading" />
+
+                    <div name="button_box" class="oe_button_box">
+                        <!-- In-House specific -->
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-money" invisible="transporter_type != 'in_house'" style="pointer-events: none;">
+                            <field name="driver_commission_amount" string="Driver Com" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="transporter_type != 'in_house'" style="pointer-events: none;">
+                            <field name="total_all_expenses" string="Expenses" widget="statinfo" />
+                        </button>
+
+                        <!-- External specific -->
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-balance-scale" invisible="transporter_type != 'external'" style="pointer-events: none;">
+                            <field name="transporter_balance" string="Transporter Bal" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-money" invisible="transporter_type != 'external'" style="pointer-events: none;">
+                            <field name="deposit_amount" string="Deposit" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-tint" invisible="transporter_type != 'external'" style="pointer-events: none;">
+                            <field name="fuel_amount" string="Fuel" widget="statinfo" />
+                        </button>
+
+                        <!-- Common -->
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-dollar" style="pointer-events: none;">
+                            <field name="invoiced_amount" string="Load Value" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-money" invisible="client_invoicing_rule != 'deposit_split'" style="pointer-events: none;">
+                            <field name="customer_deposit" string="Cust Deposit" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-users" style="pointer-events: none;">
+                            <field name="customer_balance" string="Customer Bal" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-line-chart" style="pointer-events: none;">
+                            <field name="gross_profit" string="Net Profit" widget="statinfo" />
+                        </button>
+                    </div>
 
                     <div class="d-flex justify-content-between align-items-center w-100 mb-2">
                         <div class="d-flex flex-column" style="flex: 0 0 auto; gap: 5px;">
@@ -49,7 +97,8 @@
                                 Order No: <field name="name" readonly="1" class="oe_inline" />
                             </h3>
                             <div class="d-flex align-items-center mt-2" style="gap: 15px;">
-                                <field name="transporter_type" widget="radio" options="{'horizontal': true}" nolabel="1" />
+                                <field name="transporter_type" widget="radio" options="{'horizontal': true}" nolabel="1" readonly="state != 'draft'" />
+                                <field name="route_id" placeholder="Select Route..." options="{'no_quick_create': True}" style="width: 250px;" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                 <div class="d-flex align-items-center" invisible="transporter_type != 'in_house'" style="gap: 5px;">
                                     <field name="is_walk_in" nolabel="1" />
                                     <label for="is_walk_in" string="Walk-In Customer" />
@@ -74,13 +123,12 @@
                                         <field name="expected_loading_date" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="date_loaded" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="expected_delivery_date" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
-                                        <field name="customer_id" required="1" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="transporter_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True, 'default_is_customer': False, 'res_partner_search_mode': 'supplier'}" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
-                                        <field name="vehicle_id" required="state != 'draft'" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_vehicle_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
-                                        <field name="trailer_1_id" required="state != 'draft'" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
+                                        <field name="vehicle_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_vehicle_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
+                                        <field name="trailer_1_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
                                         <field name="trailer_2_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
-                                        <field name="qty_tonnes" required="1" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
-                                        <field name="rate_per_tonne" required="1" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
+                                        <field name="qty_tonnes" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
+                                        <field name="rate_per_tonne" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="total_per_load" widget="monetary" />
                                         <field name="product_id" string="Cargo" readonly="state in ('in_progress', 'delivered', 'invoiced')" context="{'default_type': 'service', 'default_description_sale': 'Trucking and freight services.'}" />
                                         <field name="currency_id" invisible="1" />
@@ -92,17 +140,37 @@
                                 <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
                                     <h4 class="text-primary mb-3">Payment Details</h4>
                                     <group>
-                                        <field name="deposit_amount" widget="monetary" readonly="deposit_approval_state in ('requested', 'approved')" />
-                                        <field name="deposit_approval_state" widget="badge" decoration-info="deposit_approval_state == 'requested'" decoration-success="deposit_approval_state == 'approved'" decoration-danger="deposit_approval_state == 'rejected'" invisible="deposit_approval_state == 'none'" />
-                                        <field name="deposit_reject_reason" invisible="deposit_approval_state != 'rejected'" />
+                                        <field name="pol" invisible="transporter_type == 'in_house'" />
+                                        <field name="deposit_amount" widget="monetary" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and deposit_approval_state in ('requested', 'approved'))" />
+                                        
+                                        <!-- Separate Deposit Fields -->
+                                        <field name="deposit_approval_state" widget="badge" decoration-info="deposit_approval_state == 'requested'" decoration-success="deposit_approval_state == 'approved'" decoration-danger="deposit_approval_state == 'rejected'" invisible="trucking_approval_workflow == 'combined' or deposit_approval_state == 'none'" />
+                                        <field name="deposit_reject_reason" invisible="trucking_approval_workflow == 'combined' or deposit_approval_state != 'rejected'" />
                                         <field name="deposit_payment_id" invisible="not deposit_payment_id" />
                                         
-                                        <field name="fuel_litres" readonly="fuel_approval_state in ('requested', 'approved')" />
-                                        <field name="fuel_unit_price" readonly="fuel_approval_state in ('requested', 'approved')" />
+                                        <field name="fuel_litres" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and fuel_approval_state in ('requested', 'approved'))" />
+                                        <field name="fuel_unit_price" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and fuel_approval_state in ('requested', 'approved'))" />
                                         <field name="fuel_amount" widget="monetary" />
-                                        <field name="fuel_approval_state" widget="badge" decoration-info="fuel_approval_state == 'requested'" decoration-success="fuel_approval_state == 'approved'" decoration-danger="fuel_approval_state == 'rejected'" invisible="fuel_approval_state == 'none'" />
-                                        <field name="fuel_reject_reason" invisible="fuel_approval_state != 'rejected'" />
+                                        
+                                        <!-- Fuel Buttons for External Transporter -->
+                                        <div class="d-flex align-items-center mt-2" style="gap: 10px;" colspan="2">
+                                            <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
+                                            <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
+                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" />
+                                        </div>
+                                        <div invisible="not has_issued_fuel" colspan="2" class="alert alert-info mt-2" role="alert" style="padding: 10px;">
+                                            <field name="fuel_issue_logs" nolabel="1" readonly="1"/>
+                                        </div>
+
+                                        <!-- Separate Fuel Fields -->
+                                        <field name="fuel_approval_state" widget="badge" decoration-info="fuel_approval_state == 'requested'" decoration-success="fuel_approval_state == 'approved'" decoration-danger="fuel_approval_state == 'rejected'" invisible="trucking_approval_workflow == 'combined' or fuel_approval_state == 'none'" />
+                                        <field name="fuel_reject_reason" invisible="trucking_approval_workflow == 'combined' or fuel_approval_state != 'rejected'" />
                                         <field name="fuel_payment_id" invisible="not fuel_payment_id" />
+
+                                        <!-- Combined Advance Fields -->
+                                        <field name="total_advance" widget="monetary" style="font-weight: bold;" invisible="trucking_approval_workflow == 'separate'" />
+                                        <field name="advance_approval_state" widget="badge" decoration-info="advance_approval_state == 'requested'" decoration-success="advance_approval_state == 'approved'" decoration-danger="advance_approval_state == 'rejected'" invisible="trucking_approval_workflow == 'separate' or advance_approval_state == 'none'" />
+                                        <field name="advance_reject_reason" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'rejected'" />
 
                                         <field name="balance" widget="monetary" />
                                         <field name="journal_id" required="state == 'pending_approval'" />
@@ -114,7 +182,7 @@
                                     <h4 class="text-primary mb-3">Delivery Info</h4>
                                     <group>
                                         <field name="delivery_date" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="pod" required="state in ('in_progress', 'delivered', 'invoiced')" />
+                                        <field name="pod" />
                                         <field name="delivered_qty" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="variance_qty" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="variance_value" widget="monetary" readonly="state in ('delivered', 'invoiced')" />
@@ -128,10 +196,11 @@
                                 <div class="col-md-3" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
                                     <h4 class="text-primary mb-3">Customer Recovery Details</h4>
                                     <group>
+                                        <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="invoice_id" />
                                         <field name="invoiced_amount" widget="monetary" />
                                         <field name="paid" widget="monetary" />
-                                        <field name="customer_rate" required="1" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
+                                        <field name="customer_rate" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="customer_balance" widget="monetary" />
                                         <field name="gross_profit" widget="monetary" style="font-weight: bold;" />
                                     </group>
@@ -139,11 +208,15 @@
                             </div>
 
                             
-                            <div class="mt-4 p-3 bg-light" style="border-radius: 5px;" invisible="transporter_type == 'in_house'">
+                            <div class="mt-4 p-3 bg-light" style="border-radius: 5px;">
                                 <h4 class="text-info">Billing Policy</h4>
                                 <group col="4">
                                     <field name="bill_customer_qty" widget="radio" options="{'horizontal': true}" />
-                                    <field name="bill_transporter_qty" widget="radio" options="{'horizontal': true}" />
+                                    <field name="bill_transporter_qty" widget="radio" options="{'horizontal': true}" invisible="transporter_type == 'in_house'" />
+                                </group>
+                                <group col="4">
+                                    <field name="client_invoicing_rule" widget="radio" options="{'horizontal': true}" />
+                                    <field name="deposit_percentage" invisible="client_invoicing_rule != 'deposit_split'" />
                                 </group>
                             </div>
 
@@ -152,27 +225,34 @@
                                 <div class="col-md-4" style="border: 1px solid #ccc; padding: 10px;">
                                     <h4 class="text-primary mb-3">Route &amp; Dates</h4>
                                     <group>
-                                        <field name="route_id" required="1" options="{'no_quick_create': True}" />
                                         <field name="booking_date" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="expected_loading_date" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="expected_delivery_date" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="date_loaded" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="delivery_date" string="Date Delivered" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="pod" required="state in ('in_progress', 'delivered', 'invoiced')" />
+                                        <field name="pod" />
                                         <field name="pod_date" readonly="1" force_save="1" />
                                     </group>
                                 </div>
                                 <div class="col-md-4" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
                                     <h4 class="text-primary mb-3">Asset Details</h4>
                                     <group>
-                                        <field name="vehicle_id" required="1" domain="[('ownership_type', '=', 'company')]" context="{'default_ownership_type': 'company'}" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="vehicle_id" domain="[('ownership_type', '=', 'company')]" context="{'default_ownership_type': 'company'}" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="trailer_1_id" domain="[('ownership_type', '=', 'company')]" context="{'default_ownership_type': 'company'}" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="trailer_2_id" domain="[('ownership_type', '=', 'company')]" context="{'default_ownership_type': 'company'}" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="driver_id" required="1" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="driver_id" context="{'default_is_driver': True, 'default_is_supplier': True}" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="commission_type" invisible="transporter_type != 'in_house'" />
+                                        <field name="commission_percentage" invisible="commission_type != 'percentage'" />
+                                        <field name="trucking_enable_driver_penalties" invisible="1" />
+                                        <field name="penalty_amount" invisible="transporter_type != 'in_house' or not trucking_enable_driver_penalties" />
+                                        <field name="penalty_reason" invisible="penalty_amount == 0 or not trucking_enable_driver_penalties" />
                                         <field name="driver_commission_amount" widget="monetary" readonly="state in ('delivered', 'invoiced')" invisible="transporter_type != 'in_house'" />
                                         <div class="d-flex align-items-center mt-2" style="gap: 10px;">
                                             <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
+                                            <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
                                             <button name="%(action_trucking_receive_fuel_wizard)d" type="action" string="Receive Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
+                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Issued Fuel" class="btn-danger" invisible="not has_issued_fuel" />
+                                            <button name="action_reverse_received_fuel" type="object" string="Reverse Received Fuel" class="btn-danger" invisible="not receive_fuel_logs" />
                                         </div>
                                         <div invisible="not has_issued_fuel" colspan="2" class="alert alert-info mt-2" role="alert" style="padding: 10px;">
                                             <field name="fuel_issue_logs" nolabel="1" readonly="1"/>
@@ -185,10 +265,11 @@
                                 <div class="col-md-4" style="border: 1px solid #ccc; padding: 10px; border-left: none;">
                                     <h4 class="text-primary mb-3">Customer Invoice</h4>
                                     <group>
-                                        <field name="customer_id" required="1" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="customer_rate" required="1" string="Rate" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="qty_tonnes" required="1" string="Qty" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="invoiced_amount" string="Total per load" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="transporter_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True, 'default_is_customer': False, 'res_partner_search_mode': 'supplier'}" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="customer_rate" string="Rate" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="qty_tonnes" string="Qty" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="display_total_per_load" string="Total per load" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="invoice_id" string="Invoice No" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="pod_confirmed" readonly="not pod" />
                                         <field name="customer_balance" string="Balance" readonly="state in ('delivered', 'invoiced')" />
@@ -208,11 +289,11 @@
                             <field name="expense_ids" readonly="state in ('delivered', 'invoiced')">
                                 <list editable="bottom">
                                     <field name="date" optional="show" />
-                                    <field name="account_id" required="1" optional="show" />
-                                    <field name="supplier_id" required="1" optional="show" />
-                                    <field name="amount" required="1" optional="show" />
+                                    <field name="account_id" optional="show" />
+                                    <field name="supplier_id" optional="show" />
+                                    <field name="amount" optional="show" />
                                     <field name="doc_no" optional="show" />
-                                    <field name="journal_id" required="1" optional="show" />
+                                    <field name="journal_id" optional="show" />
                                     <field name="state" optional="show" />
                                 </list>
                             </field>
@@ -221,7 +302,7 @@
                         <page string="Route &amp; Borders" name="route_borders">
                             <group>
                                 <group>
-                                    <field name="route_id" required="1" readonly="state in ('in_progress', 'delivered', 'invoiced')" options="{'no_quick_create': True}" />
+                                    <field name="is_delayed_loading" invisible="1" />
                                     <field name="is_cross_border_route" invisible="1" />
                                 </group>
                             </group>

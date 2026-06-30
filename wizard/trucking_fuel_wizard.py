@@ -8,66 +8,49 @@ class TruckingFuelWizard(models.TransientModel):
     load_id = fields.Many2one('trucking.load', string='Load', required=True)
     qty = fields.Float(string='Quantity (Litres)', required=True, default=0.0)
     cost_price = fields.Float(string='Cost Price', required=True, default=1.20)
+    issue_price = fields.Float(string='Issue Price (Sell)', required=True, default=1.50)
     total_cost = fields.Float(string='Total Cost', compute='_compute_total_cost')
+    total_selling = fields.Float(string='Total Selling', compute='_compute_total_cost')
     has_issued_fuel = fields.Boolean(related='load_id.has_issued_fuel')
+    supplier_id = fields.Many2one('res.partner', string='Supplier', domain=[('supplier_rank', '>', 0)])
+    allow_supplier = fields.Boolean(related='load_id.company_id.trucking_allow_supplier_on_issue_fuel')
 
-    @api.depends('qty', 'cost_price')
+    @api.depends('qty', 'cost_price', 'issue_price')
     def _compute_total_cost(self):
         for rec in self:
             rec.total_cost = rec.qty * rec.cost_price
+            rec.total_selling = rec.qty * rec.issue_price
 
     def action_confirm(self):
         self.ensure_one()
         if self.qty <= 0:
             raise UserError(_("Quantity must be greater than zero."))
-        import logging
-        _logger = logging.getLogger(__name__)
-        _logger.info("DEBUG FUEL WIZARD: total_cost=%s, load_id=%s, total_per_load=%s", self.total_cost, self.load_id.id, self.load_id.total_per_load)
         
-        # Validation removed as requested by user
+        supplier_to_use = self.supplier_id
+        if not supplier_to_use:
+            default_supplier = self.env['res.partner'].sudo().search([('name', '=', 'Default Supplier')], limit=1)
+            if not default_supplier:
+                default_supplier = self.env['res.partner'].sudo().create({'name': 'Default Supplier', 'supplier_rank': 1})
+            supplier_to_use = default_supplier
 
-        # Find or create Fuel Product
-        product = self.env['product.product'].search([('default_code', '=', 'FUEL')], limit=1)
-        if not product:
-            product = self.env['product.product'].create({
-                'name': 'Fuel',
-                'default_code': 'FUEL',
-                'type': 'consu',
-                'is_storable': True,
-                'standard_price': 1.20,
-                'list_price': 1.98,
-                'uom_id': self.env.ref('uom.product_uom_litre').id if self.env.ref('uom.product_uom_litre', raise_if_not_found=False) else self.env.ref('uom.product_uom_unit').id,
-            })
-            
-            # Initial stock for fuel if we just created it
-            stock_location = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1).lot_stock_id
-            if stock_location:
-                self.env['stock.quant']._update_available_quantity(product, stock_location, 1000.0)
-
-        # Check stock quantity
-        stock_location = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1).lot_stock_id
-        if not stock_location:
-            raise UserError(_("No stock location found for the company."))
-            
-        available_qty = product.with_context(location=stock_location.id).free_qty
-        if self.qty > available_qty:
-            raise ValidationError(_("Requested quantity (%(req)s) exceeds available stock (%(avail)s) for Fuel.", req=self.qty, avail=available_qty))
-
-        # Prepare analytic distribution if load has analytic account
-        analytic_dist = {}
-        if self.load_id.analytic_account_id:
-            analytic_dist = {str(self.load_id.analytic_account_id.id): 100}
-
-        # Perform stock.scrap
-        scrap = self.env['stock.scrap'].create({
-            'product_id': product.id,
-            'product_uom_id': product.uom_id.id,
-            'scrap_qty': self.qty,
-            'location_id': stock_location.id,
-            'origin': self.load_id.name,
-            'analytic_distribution': analytic_dist,
-            'trucking_load_id': self.load_id.id,
+        # Update Load tracking fields but DO NOT issue accounting documents yet
+        self.load_id.write({
+            'issued_fuel_qty': self.qty,
+            'issued_fuel_rate': self.cost_price,
+            'fuel_issue_price': self.issue_price,
+            'fuel_issue_date': fields.Datetime.now(),
+            'fuel_issue_user_id': self.env.user.id,
+            'issued_fuel_supplier_id': supplier_to_use.id,
+            'fuel_litres': self.qty,
+            'fuel_unit_price': self.cost_price,
+            'fuel_amount': self.qty * self.issue_price,
         })
-        scrap.action_validate()
+        
+        # Trigger fuel approval request automatically
+        self.load_id.action_request_fuel_approval()
+        
+        # Log to Chatter
+        total_val = self.qty * self.cost_price
+        self.load_id.message_post(body=f"<b>Fuel Issue Requested</b><br/>{self.qty}L requested from {supplier_to_use.name} at {self.cost_price}/L. Total: ${total_val:.2f}.")
 
         return {'type': 'ir.actions.act_window_close'}

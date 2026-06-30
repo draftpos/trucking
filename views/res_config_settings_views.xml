@@ -26,7 +26,83 @@
                         <setting help="Default Journal to receive fuel">
                             <field name="receive_fuel_journal_id"/>
                         </setting>
+                        <setting help="Auto-create Sales Invoice when Load is Delivered">
+                            <field name="trucking_auto_create_invoice"/>
+                        </setting>
+                        <setting help="When should percentage-based driver commissions be calculated?">
+                            <field name="trucking_commission_calc_trigger"/>
+                        </setting>
+                        <setting help="Default Driver Commission Type">
+                            <field name="trucking_default_commission_type"/>
+                        </setting>
+                        <setting help="Default Commission Percentage" invisible="trucking_default_commission_type != 'percentage'">
+                            <field name="trucking_default_commission_percentage"/>
+                        </setting>
+                        <setting help="Default Fixed Commission Amount" invisible="trucking_default_commission_type != 'fixed'">
+                            <field name="trucking_default_commission_fixed"/>
+                        </setting>
+                        <setting help="Default Service Product for Driver Commission (Used on Vendor Bills)">
+                            <field name="trucking_default_driver_commission_product_id"/>
+                        </setting>
                     </block>
+                    
+                    <block title="Analytic Settings" name="trucking_analytics">
+                        <setting help="How should analytic accounts be tracked for Income and Expenses?">
+                            <field name="trucking_analytic_strategy"/>
+                        </setting>
+                    </block>
+                    
+                    <block title="Loads Settings" name="trucking_loads">
+                        <setting help="Approval Workflow for Fuel and Deposit Advances">
+                            <field name="trucking_approval_workflow"/>
+                        </setting>
+                        <setting help="Allow picking a specific Supplier when issuing fuel">
+                            <field name="trucking_allow_supplier_on_issue_fuel"/>
+                        </setting>
+                        <setting help="Allow Zero Value Advance/Fuel Requests">
+                            <field name="trucking_allow_zero_advance"/>
+                        </setting>
+                        <setting help="Activate Issue Fuel Feature">
+                            <field name="trucking_enable_issue_fuel"/>
+                        </setting>
+                        <setting help="Allow adjusting the actual fuel consumed">
+                            <field name="trucking_allow_fuel_adjustments"/>
+                        </setting>
+                        <setting help="Default In-House Fuel Process">
+                            <field name="trucking_in_house_fuel_process"/>
+                        </setting>
+                        <setting help="Default External Fuel Process">
+                            <field name="trucking_external_fuel_process"/>
+                        </setting>
+                        <div class="col-12 mt-4">
+                            <span class="d-block font-weight-bold mb-2">Required Fields Configuration</span>
+                            <field name="trucking_mandatory_field_ids">
+                                <list editable="bottom" create="false" delete="false">
+                                    <field name="load_type" readonly="1"/>
+                                    <field name="field_id" readonly="1"/>
+                                    <field name="is_save" widget="boolean_toggle"/>
+                                    <field name="is_confirm" widget="boolean_toggle"/>
+                                    <field name="is_deliver" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </div>
+                    </block>
+
+                    <block title="General Settings" name="trucking_general">
+                        <setting help="Rename 'Proof of Delivery' label">
+                            <field name="trucking_pod_label"/>
+                        </setting>
+                        <setting help="Enable Driver/Transporter Penalties">
+                            <field name="trucking_enable_driver_penalties"/>
+                        </setting>
+                    </block>
+
+                    
+                    
+
+                    
+
+
                 </app>
             </xpath>
         </field>

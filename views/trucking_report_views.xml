@@ -144,4 +144,5 @@
         <field name="view_id" ref="view_trucking_truck_profitability_graph"/>
         <field name="act_window_id" ref="action_trucking_truck_profitability_report"/>
     </record>
+
 </odoo>

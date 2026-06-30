@@ -24,3 +24,56 @@ class ResConfigSettings(models.TransientModel):
         related='company_id.receive_fuel_journal_id',
         readonly=False
     )
+
+    trucking_allow_supplier_on_issue_fuel = fields.Boolean(
+        related='company_id.trucking_allow_supplier_on_issue_fuel', readonly=False
+    )
+    trucking_allow_zero_advance = fields.Boolean(
+        related='company_id.trucking_allow_zero_advance', readonly=False
+    )
+    trucking_enable_issue_fuel = fields.Boolean(
+        related='company_id.trucking_enable_issue_fuel', readonly=False
+    )
+    trucking_allow_fuel_adjustments = fields.Boolean(
+        related='company_id.trucking_allow_fuel_adjustments', readonly=False
+    )
+    trucking_in_house_fuel_process = fields.Selection(
+        related='company_id.trucking_in_house_fuel_process', readonly=False
+    )
+    trucking_external_fuel_process = fields.Selection(
+        related='company_id.trucking_external_fuel_process', readonly=False
+    )
+    trucking_pod_label = fields.Char(
+        related='company_id.trucking_pod_label', readonly=False
+    )
+    trucking_auto_create_invoice = fields.Boolean(
+        related='company_id.trucking_auto_create_invoice', readonly=False
+    )
+    trucking_enable_driver_penalties = fields.Boolean(
+        related='company_id.trucking_enable_driver_penalties', readonly=False
+    )
+    trucking_commission_calc_trigger = fields.Selection(
+        related='company_id.trucking_commission_calc_trigger', readonly=False
+    )
+    trucking_approval_workflow = fields.Selection(
+        related='company_id.trucking_approval_workflow', readonly=False
+    )
+    trucking_analytic_strategy = fields.Selection(
+        related='company_id.trucking_analytic_strategy', readonly=False
+    )
+
+
+    trucking_default_commission_type = fields.Selection(related='company_id.trucking_default_commission_type', readonly=False)
+    trucking_default_commission_percentage = fields.Float(related='company_id.trucking_default_commission_percentage', readonly=False)
+    trucking_default_commission_fixed = fields.Monetary(related='company_id.trucking_default_commission_fixed', readonly=False)
+    trucking_default_driver_commission_product_id = fields.Many2one(
+        related='company_id.trucking_default_driver_commission_product_id', 
+        readonly=False
+    )
+
+
+    
+    
+    
+
+    trucking_mandatory_field_ids = fields.One2many(related='company_id.trucking_mandatory_field_ids', readonly=False)

@@ -10,6 +10,9 @@ class TruckingReceiveFuelWizard(models.TransientModel):
     cost_price = fields.Float(string='Rate', required=True, default=1.20)
     amount = fields.Monetary(string='Amount', compute='_compute_amount', currency_field='currency_id', store=True)
     currency_id = fields.Many2one(related='load_id.currency_id')
+    allow_supplier = fields.Boolean(related='load_id.company_id.trucking_allow_supplier_on_issue_fuel')
+    supplier_id = fields.Many2one('res.partner', string='Supplier', domain="[('contact_type', '=', 'supplier')]")
+
 
     @api.depends('qty', 'cost_price')
     def _compute_amount(self):
@@ -28,9 +31,8 @@ class TruckingReceiveFuelWizard(models.TransientModel):
         if not self.load_id.customer_id:
             raise UserError(_("The Load must have a Customer assigned to receive fuel from them."))
 
-        analytic_dist = False
-        if self.load_id.analytic_account_id:
-            analytic_dist = {str(self.load_id.analytic_account_id.id): 100}
+        # Prepare analytic distribution from Load
+        analytic_dist = self.load_id._get_load_analytic_distribution() or {}
             
         receivable_account = self.load_id.customer_id.property_account_receivable_id
         if not receivable_account:

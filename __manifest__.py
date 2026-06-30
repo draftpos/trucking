@@ -15,10 +15,12 @@
         "views/res_partner_views.xml",
         "views/trucking_trailer_views.xml",
         "views/trucking_vehicle_views.xml",
-        "views/trucking_driver_views.xml",
+
         "views/trucking_route_views.xml",
         "wizard/trucking_fuel_wizard_views.xml",
+        "wizard/trucking_fuel_adjust_wizard_views.xml",
         "wizard/trucking_receive_fuel_wizard_views.xml",
+
         "views/trucking_load_views.xml",
         "views/trucking_report_views.xml",
         "views/account_payment_views.xml",
@@ -32,6 +34,7 @@
         "web.assets_backend": [
             "trucking/static/src/js/trucking_dashboard.js",
             "trucking/static/src/js/trucking_navbar.js",
+            "trucking/static/src/js/trucking_form_validation.js",
             "trucking/static/src/xml/trucking_dashboard.xml",
             "trucking/static/src/scss/trucking_dashboard.scss",
         ],
