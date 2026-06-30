@@ -98,7 +98,6 @@
                             </h3>
                             <div class="d-flex align-items-center mt-2" style="gap: 15px;">
                                 <field name="transporter_type" widget="radio" options="{'horizontal': true}" nolabel="1" readonly="state != 'draft'" />
-                                <field name="route_id" placeholder="Select Route..." options="{'no_quick_create': True}" style="width: 250px;" readonly="state in ('in_progress', 'delivered', 'invoiced')"/>
                                 <div class="d-flex align-items-center" invisible="transporter_type != 'in_house'" style="gap: 5px;">
                                     <field name="is_walk_in" nolabel="1" />
                                     <label for="is_walk_in" string="Walk-In Customer" />
@@ -119,6 +118,7 @@
                                     <h4 class="text-primary mb-3">Loading Details</h4>
                                     <group>
                                         <field name="is_delayed_loading" invisible="1" />
+                                        <field name="route_id" placeholder="Select Route..." options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="booking_date" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="expected_loading_date" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="date_loaded" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
@@ -225,6 +225,7 @@
                                 <div class="col-md-4" style="border: 1px solid #ccc; padding: 10px;">
                                     <h4 class="text-primary mb-3">Route &amp; Dates</h4>
                                     <group>
+                                        <field name="route_id" placeholder="Select Route..." options="{'no_quick_create': True}" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="booking_date" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="expected_loading_date" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="expected_delivery_date" readonly="state in ('delivered', 'invoiced')" />
