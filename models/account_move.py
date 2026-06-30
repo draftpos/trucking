@@ -30,6 +30,22 @@ class AccountMove(models.Model):
     trucking_bill_load_ids = fields.One2many('trucking.load', 'transporter_bill_id', string='Trucking Bill Loads')
     pod = fields.Char(string='POD', compute='_compute_pod_details')
     pod_date = fields.Date(string='POD Date', compute='_compute_pod_details')
+    trucking_description = fields.Char(string='Trucking Description', compute='_compute_trucking_description')
+
+    def _compute_trucking_description(self):
+        for move in self:
+            loads = move.trucking_load_ids
+            if loads:
+                first_load = loads[0]
+                cargo = first_load.product_id.name or 'Cargo'
+                if first_load.route_id:
+                    source = first_load.route_id.source or 'Unknown'
+                    destination = first_load.route_id.destination or 'Unknown'
+                    move.trucking_description = f"Transportation of {cargo} from {source} to {destination}"
+                else:
+                    move.trucking_description = f"Transportation of {cargo}"
+            else:
+                move.trucking_description = "Transportation Services"
 
     def _compute_pod_details(self):
         for move in self:
