@@ -136,6 +136,11 @@ class ResCompany(models.Model):
                         'is_deliver': is_deliver
                     })
 
+    @api.model
+    def _init_default_mandatory_fields_all(self):
+        companies = self.search([])
+        companies.sudo()._init_default_mandatory_fields()
+
     def _setup_default_mandatory_fields(self):
         self.ensure_one()
         if self.trucking_mandatory_field_ids:

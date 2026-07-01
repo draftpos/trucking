@@ -42,4 +42,9 @@
             <field name="active" eval="True"/>
         </record>
     </data>
+    
+    <data noupdate="0">
+        <!-- Automatically initialize mandatory fields for all companies during module upgrade -->
+        <function model="res.company" name="_init_default_mandatory_fields_all"/>
+    </data>
 </odoo>
