@@ -14,7 +14,10 @@ class ResPartner(models.Model):
         ('customer', 'Customer'),
         ('transporter', 'Transporter'),
         ('driver', 'Driver'),
-        ('supplier', 'Supplier')
+        ('supplier', 'Supplier'),
+        ('both', 'Both'),
+        ('doctor', 'Doctor'),
+        ('none', 'None')
     ], string='Contact Type')
     
     load_count = fields.Integer(string='Load Count', compute='_compute_load_stats')

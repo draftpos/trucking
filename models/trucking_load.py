@@ -241,7 +241,13 @@ class TruckingLoad(models.Model):
     def _compute_driver_commission_amount_dynamic(self):
         for rec in self:
             if rec.commission_type == 'percentage':
-                net = rec.gross_profit - rec.penalty_amount
+                # Calculate profit BEFORE deducting the commission itself
+                if rec.transporter_type == 'in_house':
+                    base_profit = rec.invoiced_amount - rec.total_expenses - rec.issued_fuel_cost
+                else:
+                    base_profit = rec.invoiced_amount - rec.total_per_load - rec.total_expenses - rec.issued_fuel_cost
+                
+                net = base_profit - rec.penalty_amount
                 if net > 0:
                     rec.driver_commission_amount = net * (rec.commission_percentage / 100.0)
                 else:
