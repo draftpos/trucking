@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_trucking_mandatory_field_tree" model="ir.ui.view">
+        <field name="name">trucking.mandatory.field.tree</field>
+        <field name="model">trucking.mandatory.field</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" create="false" delete="false">
+                <field name="company_id" groups="base.group_multi_company" optional="show"/>
+                <field name="load_type" readonly="1"/>
+                <field name="field_id" readonly="1"/>
+                <field name="is_save" widget="boolean_toggle"/>
+                <field name="is_confirm" widget="boolean_toggle"/>
+                <field name="is_deliver" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_trucking_mandatory_field_search" model="ir.ui.view">
+        <field name="name">trucking.mandatory.field.search</field>
+        <field name="model">trucking.mandatory.field</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="field_id"/>
+                <field name="load_type" readonly="1"/>
+                <filter string="In-House" name="inhouse" domain="[('load_type', '=', 'inhouse')]"/>
+                <filter string="External" name="external" domain="[('load_type', '=', 'external')]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Load Type" name="group_by_load_type" context="{'group_by': 'load_type'}"/>
+                    <filter string="Company" name="group_by_company" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_trucking_mandatory_field" model="ir.actions.act_window">
+        <field name="name">Mandatory Fields Matrix</field>
+        <field name="res_model">trucking.mandatory.field</field>
+        <field name="view_mode">tree</field>
+        <field name="search_view_id" ref="view_trucking_mandatory_field_search"/>
+        <field name="context">{'search_default_group_by_load_type': 1}</field>
+    </record>
+
+    <menuitem id="menu_trucking_mandatory_field"
+              name="Mandatory Fields"
+              parent="trucking_config_menu"
+              action="action_trucking_mandatory_field"
+              sequence="50"/>
+</odoo>

@@ -14,5 +14,6 @@ access_trucking_customer_profitability,trucking.customer.profitability,model_tru
 access_trucking_fuel_wizard,trucking.fuel.wizard,model_trucking_fuel_wizard,trucking.group_trucking_user,1,1,1,1
 access_payment_load_warning_wizard,payment.load.warning.wizard,model_payment_load_warning_wizard,base.group_user,1,1,1,1
 access_trucking_zero_confirm_wizard,trucking.zero.confirm.wizard,model_trucking_zero_confirm_wizard,base.group_user,1,1,1,1
+access_trucking_fuel_adjust_wizard,trucking.fuel.adjust.wizard,model_trucking_fuel_adjust_wizard,trucking.group_trucking_user,1,1,1,1
 
 trucking.access_trucking_mandatory_field,access_trucking_mandatory_field,trucking.model_trucking_mandatory_field,base.group_user,1,1,1,1

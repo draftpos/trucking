@@ -35,10 +35,15 @@
                     <button name="action_approve_advance" string="Approve Advance" type="object" class="btn-success" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver,trucking.group_trucking_fuel_approver" />
                     <button name="action_reject_advance" string="Reject Advance" type="object" class="btn-danger" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver,trucking.group_trucking_fuel_approver" />
 
-                    <!-- Separate Approvals -->
+                    <!-- Separate Approvals for EXTERNAL -->
                     <button name="action_request_fuel_approval" string="Request Fuel Approval" type="object" class="oe_highlight" invisible="trucking_approval_workflow == 'combined' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or fuel_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
                     <button name="action_approve_fuel" string="Approve Fuel" type="object" class="btn-success" invisible="trucking_approval_workflow == 'combined' or fuel_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_fuel_approver" />
                     <button name="action_reject_fuel" string="Reject Fuel" type="object" class="btn-danger" invisible="trucking_approval_workflow == 'combined' or fuel_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_fuel_approver" />
+
+                    <!-- Fuel Approvals for IN-HOUSE -->
+                    <button name="action_request_fuel_approval" string="Request Fuel Approval" type="object" class="oe_highlight" invisible="transporter_type != 'in_house' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or fuel_approval_state not in ('none', 'rejected')" />
+                    <button name="action_approve_fuel" string="Approve Fuel" type="object" class="btn-success" invisible="transporter_type != 'in_house' or fuel_approval_state != 'requested'" groups="trucking.group_trucking_fuel_approver" />
+                    <button name="action_reject_fuel" string="Reject Fuel" type="object" class="btn-danger" invisible="transporter_type != 'in_house' or fuel_approval_state != 'requested'" groups="trucking.group_trucking_fuel_approver" />
 
                     <button name="action_request_deposit_approval" string="Request Deposit Approval" type="object" class="oe_highlight" invisible="trucking_approval_workflow == 'combined' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or deposit_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
                     <button name="action_approve_deposit" string="Approve Deposit" type="object" class="btn-success" invisible="trucking_approval_workflow == 'combined' or deposit_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver" />
@@ -49,8 +54,8 @@
                     <field name="state" widget="statusbar" statusbar_visible="draft,upcoming,in_progress,delivered,invoiced" />
                 </header>
                 <sheet>
-                    <div class="alert alert-info text-center" role="alert" invisible="not has_issued_fuel" style="margin-bottom: 10px;">
-                        <strong>Fuel Issued</strong> on <field name="fuel_issue_date" readonly="1"/> by <field name="fuel_issue_user_id" readonly="1" widget="many2one_avatar_user"/>
+                    <div class="alert alert-info text-center" role="alert" invisible="not has_issued_fuel and fuel_banner_text != 'Fuel Reversed'" style="margin-bottom: 10px;">
+                        <strong><field name="fuel_banner_text" nolabel="1" class="oe_inline" readonly="1" style="font-weight: bold;"/></strong> on <field name="fuel_issue_date" readonly="1"/> by <field name="fuel_issue_user_id" readonly="1" widget="many2one_avatar_user"/>
                     </div>
                     <field name="trucking_approval_workflow" invisible="1" />
                     <field name="mandatory_fields_json" invisible="1" />
@@ -60,9 +65,6 @@
                         <!-- In-House specific -->
                         <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-money" invisible="transporter_type != 'in_house'" style="pointer-events: none;">
                             <field name="driver_commission_amount" string="Driver Com" widget="statinfo" />
-                        </button>
-                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-credit-card" invisible="transporter_type != 'in_house'" style="pointer-events: none;">
-                            <field name="total_all_expenses" string="Expenses" widget="statinfo" />
                         </button>
 
                         <!-- External specific -->
@@ -79,6 +81,9 @@
                         <!-- Common -->
                         <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-dollar" style="pointer-events: none;">
                             <field name="invoiced_amount" string="Load Value" widget="statinfo" />
+                        </button>
+                        <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-credit-card" style="pointer-events: none;">
+                            <field name="total_all_expenses" string="Expenses" widget="statinfo" />
                         </button>
                         <button name="action_dummy" type="object" class="oe_stat_button" icon="fa-money" invisible="client_invoicing_rule != 'deposit_split'" style="pointer-events: none;">
                             <field name="customer_deposit" string="Cust Deposit" widget="statinfo" />
@@ -124,9 +129,9 @@
                                         <field name="date_loaded" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="expected_delivery_date" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="transporter_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True, 'default_is_customer': False, 'res_partner_search_mode': 'supplier'}" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
-                                        <field name="vehicle_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_vehicle_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
-                                        <field name="trailer_1_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
-                                        <field name="trailer_2_id" context="{'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
+                                        <field name="vehicle_id" context="{'default_ownership_type': 'external', 'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_vehicle_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
+                                        <field name="trailer_1_id" context="{'default_ownership_type': 'external', 'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
+                                        <field name="trailer_2_id" context="{'default_ownership_type': 'external', 'default_partner_id': transporter_id, 'form_view_ref': 'trucking.view_trucking_trailer_form'}" options="{'no_quick_create': True}" readonly="state in ('in_progress', 'delivered', 'invoiced')" domain="[('partner_id', '=', transporter_id)]" />
                                         <field name="qty_tonnes" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="rate_per_tonne" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="total_per_load" widget="monetary" />
@@ -149,12 +154,17 @@
                                         
                                         <field name="fuel_litres" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and fuel_approval_state in ('requested', 'approved'))" />
                                         <field name="fuel_unit_price" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and fuel_approval_state in ('requested', 'approved'))" />
+                                        <field name="fuel_issue_price" readonly="(trucking_approval_workflow == 'combined' and advance_approval_state in ('requested', 'approved')) or (trucking_approval_workflow == 'separate' and fuel_approval_state in ('requested', 'approved'))" />
+                                        <field name="fuel_cost_amount" widget="monetary" />
                                         <field name="fuel_amount" widget="monetary" />
+                                        <field name="fuel_vendor_bill_id" invisible="not fuel_vendor_bill_id" />
+                                        <field name="fuel_sales_invoice_id" invisible="not fuel_sales_invoice_id" />
                                         
                                         <!-- Fuel Buttons for External Transporter -->
                                         <div class="d-flex align-items-center mt-2" style="gap: 10px;" colspan="2">
-                                            <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
-                                            <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
+                                            <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="has_issued_fuel" />
+                                            <button name="action_dummy_issue_fuel_error" type="object" string="Fuel Issued Already" class="btn-secondary text-muted" invisible="not has_issued_fuel" />
+                                            <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="not has_issued_fuel" />
                                             <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" />
                                         </div>
                                         <div invisible="not has_issued_fuel" colspan="2" class="alert alert-info mt-2" role="alert" style="padding: 10px;">
@@ -172,7 +182,7 @@
                                         <field name="advance_reject_reason" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'rejected'" />
 
                                         <field name="balance" widget="monetary" />
-                                        <field name="journal_id" required="state == 'pending_approval'" />
+                                        <field name="journal_id" required="state == 'pending_approval' and transporter_type != 'in_house'" />
                                     </group>
                                 </div>
                                 
@@ -196,8 +206,8 @@
                                     <h4 class="text-primary mb-3">Customer Recovery Details</h4>
                                     <group>
                                         <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
-                                        <field name="invoice_id" />
-                                        <field name="invoiced_amount" widget="monetary" />
+                                        <field name="customer_invoices_html" widget="html" nolabel="0" />
+                                        <field name="display_total_per_load" string="Invoiced Amount" />
                                         <field name="paid" widget="monetary" />
                                         <field name="customer_rate" widget="monetary" readonly="state in ('in_progress', 'delivered', 'invoiced')" />
                                         <field name="customer_balance" widget="monetary" />
@@ -210,12 +220,12 @@
                             <div class="mt-4 p-3 bg-light" style="border-radius: 5px;">
                                 <h4 class="text-info">Billing Policy</h4>
                                 <group col="4">
-                                    <field name="bill_customer_qty" widget="radio" options="{'horizontal': true}" />
-                                    <field name="bill_transporter_qty" widget="radio" options="{'horizontal': true}" invisible="transporter_type == 'in_house'" />
+                                    <field name="bill_customer_qty" widget="radio" options="{'horizontal': true}" readonly="state not in ('draft', 'pending_approval')" />
+                                    <field name="bill_transporter_qty" widget="radio" options="{'horizontal': true}" invisible="transporter_type == 'in_house'" readonly="state not in ('draft', 'pending_approval')" />
                                 </group>
                                 <group col="4">
-                                    <field name="client_invoicing_rule" widget="radio" options="{'horizontal': true}" />
-                                    <field name="deposit_percentage" invisible="client_invoicing_rule != 'deposit_split'" />
+                                    <field name="client_invoicing_rule" widget="radio" options="{'horizontal': true}" readonly="state not in ('draft', 'pending_approval')" />
+                                    <field name="deposit_percentage" invisible="client_invoicing_rule != 'deposit_split'" readonly="state not in ('draft', 'pending_approval')" />
                                 </group>
                             </div>
 
@@ -247,12 +257,20 @@
                                         <field name="penalty_amount" invisible="transporter_type != 'in_house' or not trucking_enable_driver_penalties" />
                                         <field name="penalty_reason" invisible="penalty_amount == 0 or not trucking_enable_driver_penalties" />
                                         <field name="driver_commission_amount" widget="monetary" readonly="state in ('delivered', 'invoiced')" invisible="transporter_type != 'in_house'" />
+                                        <field name="fuel_vendor_bill_id" invisible="not fuel_vendor_bill_id" />
+                                        <field name="fuel_sales_invoice_id" invisible="not fuel_sales_invoice_id" />
                                         <div class="d-flex align-items-center mt-2" style="gap: 10px;">
-                                            <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
-                                            <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
+                                            <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="has_issued_fuel" />
+                                            <button name="action_dummy_issue_fuel_error" type="object" string="Fuel Issued Already" class="btn-secondary text-muted" invisible="not has_issued_fuel" />
+                                            <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="not has_issued_fuel" />
                                             <button name="%(action_trucking_receive_fuel_wizard)d" type="action" string="Receive Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
-                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Issued Fuel" class="btn-danger" invisible="not has_issued_fuel" />
+                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" />
                                             <button name="action_reverse_received_fuel" type="object" string="Reverse Received Fuel" class="btn-danger" invisible="not receive_fuel_logs" />
+                                        </div>
+                                        <!-- Fuel Approval Status for In-House -->
+                                        <div class="mt-2" invisible="fuel_approval_state == 'none'">
+                                            <field name="fuel_approval_state" widget="badge" decoration-info="fuel_approval_state == 'requested'" decoration-success="fuel_approval_state == 'approved'" decoration-danger="fuel_approval_state == 'rejected'" />
+                                            <field name="fuel_reject_reason" invisible="fuel_approval_state != 'rejected'" />
                                         </div>
                                         <div invisible="not has_issued_fuel" colspan="2" class="alert alert-info mt-2" role="alert" style="padding: 10px;">
                                             <field name="fuel_issue_logs" nolabel="1" readonly="1"/>
@@ -266,11 +284,10 @@
                                     <h4 class="text-primary mb-3">Customer Invoice</h4>
                                     <group>
                                         <field name="customer_id" domain="[('is_customer', '=', True)]" context="{'default_is_customer': True, 'default_is_supplier': False}" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="transporter_id" domain="[('is_supplier', '=', True), ('is_blacklisted_transporter', '=', False)]" context="{'default_is_supplier': True, 'default_is_customer': False, 'res_partner_search_mode': 'supplier'}" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="customer_rate" string="Rate" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="qty_tonnes" string="Qty" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="display_total_per_load" string="Total per load" readonly="state in ('delivered', 'invoiced')" />
-                                        <field name="invoice_id" string="Invoice No" readonly="state in ('delivered', 'invoiced')" />
+                                        <field name="customer_invoices_html" widget="html" string="Invoice No" nolabel="0" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="pod_confirmed" readonly="not pod" />
                                         <field name="customer_balance" string="Balance" readonly="state in ('delivered', 'invoiced')" />
                                     </group>

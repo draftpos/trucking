@@ -29,6 +29,9 @@
                         <setting help="Auto-create Sales Invoice when Load is Delivered">
                             <field name="trucking_auto_create_invoice"/>
                         </setting>
+                        <setting help="Determine when the customer invoice should be generated for External Transporters.">
+                            <field name="trucking_customer_invoice_stage" widget="radio" />
+                        </setting>
                         <setting help="When should percentage-based driver commissions be calculated?">
                             <field name="trucking_commission_calc_trigger"/>
                         </setting>
@@ -94,6 +97,9 @@
                         </setting>
                         <setting help="Enable Driver/Transporter Penalties">
                             <field name="trucking_enable_driver_penalties"/>
+                        </setting>
+                        <setting help="Allow Bulk Invoicing for Unconfirmed PODs">
+                            <field name="trucking_allow_unconfirmed_pod_invoice"/>
                         </setting>
                     </block>
 

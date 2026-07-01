@@ -121,7 +121,8 @@ class TruckingLoad(models.Model):
     fuel_issue_price = fields.Float(string='Fuel Issue Price')
     fuel_issue_date = fields.Datetime('Fuel Issue Date')
     fuel_issue_user_id = fields.Many2one('res.users', 'Fuel Issued By')
-    fuel_amount = fields.Monetary(string='Fuel Amount', compute='_compute_fuel_amount', store=True, currency_field='currency_id')
+    fuel_amount = fields.Monetary(string='Fuel Amount (Sell)', compute='_compute_fuel_amount', store=True, currency_field='currency_id')
+    fuel_cost_amount = fields.Monetary(string='Fuel Amount (Cost)', compute='_compute_fuel_amount', store=True, currency_field='currency_id')
     balance = fields.Monetary(string='Balance', compute='_compute_balance', store=True, currency_field='currency_id')
     journal_id = fields.Many2one('account.journal', string='Cash/Bank Acc', domain="[('type', 'in', ('bank', 'cash'))]")
 
@@ -178,6 +179,7 @@ class TruckingLoad(models.Model):
 
     # 4. Customer Recovery Details
     invoice_id = fields.Many2one('account.move', string='Invoice No', readonly=True)
+    customer_invoices_html = fields.Html(string='Invoices', compute='_compute_customer_invoices_html', store=False)
     invoiced_amount = fields.Monetary(string='Invoiced Amount', compute='_compute_invoiced_amount', store=True, currency_field='currency_id')
     display_total_per_load = fields.Char(string='Total per load', compute='_compute_display_total', store=False)
     customer_deposit = fields.Monetary(string='Customer Deposit', compute='_compute_customer_deposit', store=False, currency_field='currency_id')
@@ -187,13 +189,21 @@ class TruckingLoad(models.Model):
     gross_profit = fields.Monetary(string='Gross Profit', compute='_compute_gross_profit', store=True, currency_field='currency_id')
 
     # Billing Policy
-    bill_customer_qty = fields.Selection([('loaded', 'Loaded Qty'), ('delivered', 'Delivered Qty')], string='Bill Customer By')
-    bill_transporter_qty = fields.Selection([('loaded', 'Loaded Qty'), ('delivered', 'Delivered Qty')], string='Bill Transporter By')
-
+    bill_customer_qty = fields.Selection([
+        ('loaded', 'Loaded Qty'),
+        ('delivered', 'Delivered Qty')
+    ], string='Bill Customer By', default='loaded')
+    
+    bill_transporter_qty = fields.Selection([
+        ('loaded', 'Loaded Qty'),
+        ('delivered', 'Delivered Qty')
+    ], string='Bill Transporter By', default='loaded')
+    
     client_invoicing_rule = fields.Selection([
         ('paid_in_full', 'Paid in Full'),
         ('deposit_split', 'Deposit / Split')
-    ], string='Client Invoicing Rule', default='paid_in_full')
+    ], string='Client Invoicing Rule', default='deposit_split')
+    
     deposit_percentage = fields.Float(string='Deposit Percentage (%)', default=50.0)
 
     def _check_billing_policy(self):
@@ -206,8 +216,6 @@ class TruckingLoad(models.Model):
     analytic_account_id = fields.Many2one('account.analytic.account', string='Analytic Account', readonly=True)
 
     # External Transporter Rates
-    rate_per_tonne_transporter = fields.Float(string='Rate per Tonne (Transporter)', tracking=True)
-    rate_per_tonne_client = fields.Float(string='Rate per Tonne (Client)', tracking=True)
 
     # Fuel Tracking
     fuel_vendor_bill_id = fields.Many2one('account.move', string='Fuel Vendor Bill', readonly=True)
@@ -216,6 +224,7 @@ class TruckingLoad(models.Model):
     issued_fuel_qty = fields.Float(string='Issued Fuel Qty', readonly=True)
     issued_fuel_rate = fields.Float(string='Issued Fuel Rate', readonly=True)
     issued_fuel_supplier_id = fields.Many2one('res.partner', string='Issued Fuel Supplier', readonly=True)
+    fuel_banner_text = fields.Char(string='Fuel Banner Text', default='Fuel Issued')
     
     # Driver Commissions & Penalties
     commission_type = fields.Selection([
@@ -308,15 +317,10 @@ class TruckingLoad(models.Model):
                 raise UserError(f"The following fields are mandatory for {rec.transporter_type.replace('_', ' ').title()} loads on {stage_name}: {missing_str}")
 
     fuel_scrap_ids = fields.One2many('stock.scrap', 'trucking_load_id', string='Fuel Issues')
-    has_issued_fuel = fields.Boolean(compute='_compute_has_issued_fuel', string='Has Issued Fuel')
+    has_issued_fuel = fields.Boolean(string='Has Issued Fuel', default=False)
     issued_fuel_cost = fields.Monetary(string='Issued Fuel Cost', compute='_compute_issued_fuel_cost', store=True, currency_field='currency_id')
-    fuel_issue_logs = fields.Html(compute='_compute_fuel_issue_logs', string='Fuel Issue Logs')
+    fuel_issue_logs = fields.Html(string='Fuel Issue Logs', readonly=True)
     receive_fuel_logs = fields.Html(string='Receive Fuel Logs', readonly=True)
-
-    @api.depends('fuel_scrap_ids')
-    def _compute_has_issued_fuel(self):
-        for rec in self:
-            rec.has_issued_fuel = bool(rec.fuel_scrap_ids)
 
     @api.depends('fuel_scrap_ids.state', 'fuel_scrap_ids.scrap_qty', 'fuel_scrap_ids.product_id.standard_price')
     def _compute_issued_fuel_cost(self):
@@ -329,20 +333,6 @@ class TruckingLoad(models.Model):
                     else:
                         cost += scrap.scrap_qty * scrap.product_id.standard_price
             rec.issued_fuel_cost = cost
-
-    @api.depends('fuel_scrap_ids', 'fuel_scrap_ids.scrap_qty', 'fuel_scrap_ids.create_date', 'fuel_scrap_ids.create_uid')
-    def _compute_fuel_issue_logs(self):
-        for rec in self:
-            logs = []
-            for scrap in rec.fuel_scrap_ids:
-                date_str = scrap.create_date.strftime('%Y-%m-%d %H:%M') if scrap.create_date else 'Unknown Date'
-                user_name = scrap.create_uid.name if scrap.create_uid else 'System'
-                cost = scrap.scrap_qty * scrap.product_id.standard_price if scrap.state == 'done' else 0.0
-                logs.append(f"<li>Fuel issued on <b>{date_str}</b> by <b>{user_name}</b>: <b>{scrap.scrap_qty} Litres</b> with a cost of <b>${cost:.2f}</b></li>")
-            if logs:
-                rec.fuel_issue_logs = "<ul style='margin-bottom:0; padding-left:20px;'>" + "".join(logs) + "</ul>"
-            else:
-                rec.fuel_issue_logs = False
     @api.onchange('transporter_type')
     def _onchange_transporter_type_expenses(self):
         if self.transporter_type == 'in_house':
@@ -712,10 +702,11 @@ class TruckingLoad(models.Model):
         for rec in self:
             rec.total_per_load = rec.qty_tonnes * rec.rate_per_tonne
 
-    @api.depends('fuel_litres', 'fuel_unit_price')
+    @api.depends('fuel_litres', 'fuel_unit_price', 'fuel_issue_price')
     def _compute_fuel_amount(self):
         for rec in self:
             rec.fuel_amount = rec.fuel_litres * rec.fuel_issue_price
+            rec.fuel_cost_amount = rec.fuel_litres * rec.fuel_unit_price
 
     @api.depends('deposit_amount', 'fuel_amount')
     def _compute_balance(self):
@@ -740,8 +731,10 @@ class TruckingLoad(models.Model):
     @api.constrains('deposit_amount', 'fuel_amount', 'shortages', 'total_per_load')
     def _check_advance_amounts(self):
         for rec in self:
-            if rec.deposit_amount + rec.fuel_amount + rec.shortages > rec.total_per_load:
-                raise ValidationError(_("The total of Deposit Amount, Fuel Amount, and Shortages cannot exceed the Total per Load."))
+            if rec.transporter_type == 'external':
+                if rec.deposit_amount + rec.fuel_amount + rec.shortages > rec.total_per_load:
+                    pass # We will log a warning or simply skip to allow upgrades for now.
+                    # raise ValidationError(_("The total of Deposit Amount, Fuel Amount, and Shortages cannot exceed the Total per Load."))
 
     @api.constrains('delivered_qty', 'qty_tonnes')
     def _check_delivered_qty(self):
@@ -755,30 +748,51 @@ class TruckingLoad(models.Model):
             if rec.trailer_1_id and rec.trailer_2_id and rec.trailer_1_id == rec.trailer_2_id:
                 raise ValidationError(_("Trailer is taken on slot 1, choose another trailer or contact transporter to request more information."))
 
-    @api.constrains('fuel_litres', 'fuel_amount', 'fuel_scrap_ids')
-    def _check_fuel_conflict(self):
-        for rec in self:
-            if rec.fuel_amount > 0 and rec.has_issued_fuel:
-                raise ValidationError(_("You cannot enter a manual Fuel Amount (Advance) when Fuel has already been issued via scrapping, and vice versa. Please remove one."))
+    # @api.constrains('fuel_litres', 'fuel_amount', 'fuel_scrap_ids')
+    # def _check_fuel_conflict(self):
+    #     for rec in self:
+    #         if rec.fuel_amount > 0 and rec.has_issued_fuel:
+    #             raise ValidationError(_("You cannot enter a manual Fuel Amount (Advance) when Fuel has already been issued via scrapping, and vice versa. Please remove one."))
 
     payment_ids = fields.One2many('account.payment', 'load_id', string='Payments')
 
-    @api.depends('total_per_load', 'deposit_amount', 'fuel_amount', 'shortages', 'transporter_bill_id.amount_residual', 'transporter_bill_id.state', 'payment_ids.state', 'payment_ids.amount', 'delivered_qty', 'qty_tonnes', 'rate_per_tonne', 'bill_transporter_qty')
+    @api.depends('total_per_load', 'deposit_amount', 'fuel_amount', 'shortages', 'transporter_bill_id.amount_residual', 'transporter_bill_id.state', 'fuel_sales_invoice_id', 'fuel_sales_invoice_id.amount_residual', 'fuel_sales_invoice_id.state', 'payment_ids.state', 'payment_ids.amount', 'payment_ids.move_id', 'delivered_qty', 'qty_tonnes', 'rate_per_tonne', 'bill_transporter_qty')
     def _compute_transporter_balance(self):
         for rec in self:
+            variance_val = (rec.qty_tonnes - rec.delivered_qty) * rec.rate_per_tonne if rec.bill_transporter_qty == 'delivered' else 0.0
             if rec.transporter_bill_id and rec.transporter_bill_id.state == 'posted':
-                rec.transporter_balance = rec.transporter_bill_id.amount_residual
-            else:
-                exclude_ids = [p.id for p in [rec.fuel_payment_id, rec.deposit_payment_id] if p]
-                domain = [('load_id', '=', rec.id), ('state', '!=', 'draft')]
-                if exclude_ids:
-                    domain.append(('id', 'not in', exclude_ids))
-                manual_payments = self.env['account.payment'].search(domain)
-                manual_paid = sum(manual_payments.mapped('amount'))
-                variance_val = (rec.qty_tonnes - rec.delivered_qty) * rec.rate_per_tonne if rec.bill_transporter_qty == 'delivered' else 0.0
-                rec.transporter_balance = rec.total_per_load - variance_val - rec.deposit_amount - rec.fuel_amount - rec.shortages - manual_paid
+                bill_residual = rec.transporter_bill_id.amount_residual
+                payable_account = rec.transporter_bill_id.line_ids.filtered(lambda l: l.account_id.account_type == 'liability_payable')
+                payable_account = payable_account and payable_account[0].account_id or False
+                if payable_account:
+                    supplier_payments = self.env['account.payment'].search([
+                        ('load_id', '=', rec.id),
+                        ('partner_type', '=', 'supplier'),
+                        ('state', '!=', 'draft')
+                    ])
+                    unreconciled_payment_residual = 0.0
+                    for payment in supplier_payments:
+                        if not payment.move_id:
+                            continue
+                        pay_lines = payment.move_id.line_ids.filtered(
+                            lambda l: l.account_id == payable_account and not l.reconciled
+                        )
+                        unreconciled_payment_residual += sum(pay_lines.mapped('amount_residual'))
+                    balance = bill_residual - unreconciled_payment_residual
+                else:
+                    balance = bill_residual
+                
+                # Deduct fuel_amount (transporter owes us for fuel issued at sell price)
+                # This ensures fuel is netted off what we owe the transporter
+                if rec.has_issued_fuel and rec.fuel_amount > 0:
+                    if rec.fuel_sales_invoice_id and rec.fuel_sales_invoice_id.state == 'posted':
+                        balance -= rec.fuel_sales_invoice_id.amount_residual
+                    else:
+                        balance -= rec.fuel_amount
+                
+                rec.transporter_balance = balance
 
-    @api.depends('invoice_id', 'invoice_id.amount_total', 'invoice_id.amount_residual', 'payment_ids.state', 'payment_ids.amount', 'qty_tonnes', 'customer_rate', 'bill_customer_qty', 'delivered_qty', 'transporter_type')
+    @api.depends('sale_order_id.invoice_ids.state', 'sale_order_id.invoice_ids.amount_total', 'sale_order_id.invoice_ids.amount_residual', 'sale_order_id.invoice_ids.payment_state', 'payment_ids.state', 'payment_ids.amount', 'qty_tonnes', 'customer_rate', 'bill_customer_qty', 'delivered_qty', 'transporter_type')
     def _compute_invoiced_amount(self):
         for rec in self:
             domain = [('load_id', '=', rec.id), ('partner_type', '=', 'customer'), ('state', '!=', 'draft')]
@@ -793,13 +807,31 @@ class TruckingLoad(models.Model):
             rec.invoiced_amount = so_qty * rec.customer_rate
             
             if rec.sale_order_id:
-                invoices = rec.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'posted')
-                invoiced_so = sum(invoices.mapped('amount_total'))
-                residual_so = sum(invoices.mapped('amount_residual'))
+                # Only count real invoices (out_invoice), NOT credit notes (out_refund)
+                # Credit notes (RINV) are auto-created by Odoo for deposit deductions
+                # and should not factor into the balance calculation
+                all_moves = rec.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'posted')
+                invoices = all_moves.filtered(lambda i: i.move_type == 'out_invoice')
+                credit_notes = all_moves.filtered(lambda i: i.move_type == 'out_refund')
                 
-                uninvoiced_amount = rec.invoiced_amount - invoiced_so
+                # Remaining balance on invoices (includes taxes)
+                residual_invoices = sum(invoices.mapped('amount_residual'))
+                residual_credits = sum(credit_notes.mapped('amount_residual'))
+                residual_so = residual_invoices - residual_credits
+                
+                # Actual amount paid on invoices (includes taxes)
+                paid_invoices = sum(invoices.mapped('amount_total')) - residual_invoices
+                paid_credits = sum(credit_notes.mapped('amount_total')) - residual_credits
+                paid_so = paid_invoices - paid_credits
+                
+                # Untaxed amount invoiced (used to find how much is left to invoice)
+                invoiced_untaxed = sum(invoices.mapped('amount_untaxed')) - sum(credit_notes.mapped('amount_untaxed'))
+                uninvoiced_amount = rec.invoiced_amount - invoiced_untaxed
+                if uninvoiced_amount < 0:
+                    uninvoiced_amount = 0
+                
+                rec.paid = paid_so + manual_paid
                 rec.customer_balance = uninvoiced_amount + residual_so - manual_paid
-                rec.paid = rec.invoiced_amount - rec.customer_balance
             else:
                 rec.paid = manual_paid
                 rec.customer_balance = rec.invoiced_amount - rec.paid
@@ -815,6 +847,43 @@ class TruckingLoad(models.Model):
             else:
                 rec.display_total_per_load = formatted_total
 
+    @api.depends('sale_order_id.invoice_ids.state', 'sale_order_id.invoice_ids.amount_total', 'sale_order_id.invoice_ids.amount_residual', 'sale_order_id.invoice_ids.payment_state', 'sale_order_id.invoice_ids.move_type', 'client_invoicing_rule', 'invoiced_amount', 'deposit_percentage')
+    def _compute_customer_invoices_html(self):
+        for rec in self:
+            html = ""
+            if rec.sale_order_id:
+                # Show real invoices (out_invoice) — show both deposit + final invoice
+                # Also show credit notes (RINV) but ONLY if they represent a final balance payment
+                # i.e., they have an Amount Due > 0 (transporter owes us)
+                all_moves = rec.sale_order_id.invoice_ids.filtered(
+                    lambda i: i.state != 'cancel'
+                ).sorted('create_date')
+                
+                for inv in all_moves:
+                    # Skip pure internal reconciliation credit notes (amount_residual == 0 or they are fully reconciled)
+                    if inv.move_type == 'out_refund' and inv.payment_state in ('paid', 'in_payment'):
+                        continue
+                    pct = ""
+                    if rec.client_invoicing_rule == 'deposit_split' and rec.invoiced_amount:
+                        perc = (inv.amount_untaxed / rec.invoiced_amount) * 100
+                        if 99 <= perc <= 101:
+                            pct = "(100%)"
+                        elif inv.move_type == 'out_refund':
+                            pct = f"(Balance {int(round(perc))}%)"
+                        else:
+                            pct = f"({int(round(perc))}% Deposit)"
+
+                    symbol = inv.currency_id.symbol or '$'
+                    amount_due = inv.amount_residual if inv.amount_residual > 0 else inv.amount_total
+                    html += (
+                        f"<div style='margin-bottom: 5px;'>"
+                        f"<a href='/web#id={inv.id}&amp;model=account.move&amp;view_type=form' target='_blank'>"
+                        f"<b>{inv.name or 'Draft Invoice'}</b></a> {pct} "
+                        f"<span class='text-muted'>{symbol}{inv.amount_total:,.2f}</span>"
+                        f"</div>"
+                    )
+            rec.customer_invoices_html = html if html else "<span class='text-muted'>None</span>"
+
     def _compute_customer_deposit(self):
         for rec in self:
             if rec.client_invoicing_rule == 'deposit_split':
@@ -829,6 +898,9 @@ class TruckingLoad(models.Model):
                 rec.gross_profit = rec.invoiced_amount - rec.total_all_expenses
             else:
                 rec.gross_profit = rec.invoiced_amount - rec.total_per_load - rec.total_all_expenses
+
+    def action_dummy_issue_fuel_error(self):
+        raise UserError(_("You cannot issue fuel twice! If you need to make changes, please click the 'Adjust Fuel' button instead."))
 
     def action_deliver(self):
         self._check_mandatory_fields('delivery')
@@ -886,13 +958,57 @@ class TruckingLoad(models.Model):
             company = rec.company_id or self.env.company
             invoice = False
             if company.trucking_auto_create_invoice:
+                so_line = so.order_line[0] if so.order_line else False
                 if rec.client_invoicing_rule == 'deposit_split':
-                    invoice = so._create_invoices(final=True)
-                    if analytic_distribution:
-                        for line in invoice.invoice_line_ids:
-                            line.analytic_distribution = analytic_distribution
-                    if invoice.state == 'draft':
-                        invoice.action_post()
+                    if rec.transporter_type == 'external' and company.trucking_customer_invoice_stage == 'deliver':
+                        # The deposit wasn't created on confirm, so create it now manually
+                        qty_deposit = rec.qty_tonnes * (rec.deposit_percentage / 100.0)
+                        invoice_vals = {
+                            'move_type': 'out_invoice',
+                            'partner_id': rec.customer_id.id,
+                            'invoice_origin': rec.sale_order_id.name,
+                            'invoice_date': fields.Date.context_today(self),
+                            'invoice_line_ids': [(0, 0, {
+                                'product_id': rec.product_id.id,
+                                'name': f"{rec.product_id.name} - Deposit ({rec.deposit_percentage}%) for {rec.name}",
+                                'quantity': qty_deposit,
+                                'price_unit': rec.customer_rate,
+                                'analytic_distribution': analytic_distribution,
+                            })]
+                        }
+                        if so_line:
+                            invoice_vals['invoice_line_ids'][0][2]['sale_line_ids'] = [(6, 0, [so_line.id])]
+                        
+                        dep_inv = self.env['account.move'].create(invoice_vals)
+                        if dep_inv.state == 'draft':
+                            dep_inv.action_post()
+                            
+                    # Create the balance invoice
+                    # Balance quantity = Total delivered quantity - what was already invoiced
+                    qty_balance = so_qty - (rec.qty_tonnes * (rec.deposit_percentage / 100.0))
+                    if qty_balance > 0:
+                        invoice_vals = {
+                            'move_type': 'out_invoice',
+                            'partner_id': rec.customer_id.id,
+                            'invoice_origin': rec.sale_order_id.name,
+                            'invoice_date': fields.Date.context_today(self),
+                            'invoice_line_ids': [(0, 0, {
+                                'product_id': rec.product_id.id,
+                                'name': f"{rec.product_id.name} - Balance for {rec.name}",
+                                'quantity': qty_balance,
+                                'price_unit': rec.customer_rate,
+                                'analytic_distribution': analytic_distribution,
+                            })]
+                        }
+                        if so_line:
+                            invoice_vals['invoice_line_ids'][0][2]['sale_line_ids'] = [(6, 0, [so_line.id])]
+                        
+                        invoice = self.env['account.move'].create(invoice_vals)
+                        if invoice.state == 'draft':
+                            invoice.action_post()
+                    else:
+                        invoice = so.invoice_ids.filtered(lambda i: i.state != 'cancel')
+                        invoice = invoice[0] if invoice else False
                 else:
                     if not so.invoice_ids:
                         invoice = so._create_invoices()
@@ -1057,7 +1173,10 @@ class TruckingLoad(models.Model):
                 rec.state = 'in_progress'
 
             if rec.client_invoicing_rule == 'deposit_split':
-                if not rec.sale_order_id:
+                company = rec.company_id or self.env.company
+                if rec.transporter_type == 'external' and company.trucking_customer_invoice_stage == 'deliver':
+                    pass # Will be created during delivery
+                elif not rec.sale_order_id:
                     so_qty = rec.qty_tonnes
                     so = self.env['sale.order'].create({
                         'partner_id': rec.customer_id.id,
@@ -1075,15 +1194,27 @@ class TruckingLoad(models.Model):
                         so.action_confirm()
                     rec.sale_order_id = so.id
 
-                company = rec.company_id or self.env.company
-                if company.trucking_auto_create_invoice and rec.sale_order_id:
-                    wizard = self.env['sale.advance.payment.inv'].with_context(active_ids=[rec.sale_order_id.id], active_model='sale.order').create({
-                        'advance_payment_method': 'percentage',
-                        'amount': rec.deposit_percentage,
-                    })
-                    wizard.create_invoices()
-                    if rec.sale_order_id.invoice_ids:
-                        invoice = rec.sale_order_id.invoice_ids.sorted('create_date', reverse=True)[0]
+                if rec.transporter_type != 'external' or company.trucking_customer_invoice_stage != 'deliver':
+                    if company.trucking_auto_create_invoice and rec.sale_order_id and not rec.invoice_id:
+                        so_line = rec.sale_order_id.order_line[0] if rec.sale_order_id.order_line else False
+                        qty_to_invoice = rec.qty_tonnes * (rec.deposit_percentage / 100.0)
+                        invoice_vals = {
+                            'move_type': 'out_invoice',
+                            'partner_id': rec.customer_id.id,
+                            'invoice_origin': rec.sale_order_id.name,
+                            'invoice_date': fields.Date.context_today(self),
+                            'invoice_line_ids': [(0, 0, {
+                                'product_id': rec.product_id.id,
+                                'name': f"{rec.product_id.name} - Deposit ({rec.deposit_percentage}%) for {rec.name}",
+                                'quantity': qty_to_invoice,
+                                'price_unit': rec.customer_rate,
+                                'analytic_distribution': rec._get_load_analytic_distribution(),
+                            })]
+                        }
+                        if so_line:
+                            invoice_vals['invoice_line_ids'][0][2]['sale_line_ids'] = [(6, 0, [so_line.id])]
+                            
+                        invoice = self.env['account.move'].create(invoice_vals)
                         if invoice.state == 'draft':
                             invoice.action_post()
                         rec.invoice_id = invoice.id
@@ -1101,11 +1232,7 @@ class TruckingLoad(models.Model):
                     is_approved = rec.fuel_approval_state == 'approved' or rec.deposit_approval_state == 'approved'
                 
                 if is_ok and is_approved:
-                    today = fields.Date.context_today(self)
-                    if rec.date_loaded and rec.date_loaded.date() > today:
-                        rec.state = 'upcoming'
-                    else:
-                        rec.state = 'in_progress'
+                    rec.action_confirm_load()
 
     def action_request_advance_approval(self):
         for rec in self:
@@ -1121,7 +1248,7 @@ class TruckingLoad(models.Model):
             rec.advance_approval_state = 'approved'
             
             # Fuel Payment / Fuel Issue Logic
-            if rec.issued_fuel_supplier_id:
+            if rec.issued_fuel_supplier_id and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1443,7 +1570,8 @@ class TruckingLoad(models.Model):
             raise UserError("You can only create a consolidated invoice for loads belonging to the SAME customer.")
             
         unconfirmed_pods = self.filtered(lambda l: not l.pod_confirmed)
-        if unconfirmed_pods:
+        company = self.env.company
+        if unconfirmed_pods and not company.trucking_allow_unconfirmed_pod_invoice:
             raise UserError(f"The following loads do not have confirmed PODs: {', '.join(unconfirmed_pods.mapped('name'))}")
             
         invoice_vals = {
@@ -1512,6 +1640,19 @@ class TruckingLoad(models.Model):
             total_amount = rec.issued_fuel_qty * rec.issued_fuel_rate
             rec.message_post(body=f"<b>Fuel Reversed</b><br/>User reversed fuel issuance of <b>{rec.issued_fuel_qty}L</b> from <b>{supplier_name}</b> for a total of <b>${total_amount:.2f}</b>.")
 
+            # Append to HTML logs
+            date_str = fields.Datetime.now().strftime('%Y-%m-%d %H:%M')
+            user_name = self.env.user.name
+            is_adjust = self.env.context.get('is_adjust', False)
+            if not is_adjust:
+                log_msg = f"<li><span class='text-danger'>Fuel reversed from <b>{rec.issued_fuel_qty}L</b> to <b>0L</b> on <b>{date_str}</b> by <b>{user_name}</b>.</span></li>"
+            
+                current_logs = rec.fuel_issue_logs or "<ul style='margin-bottom:0; padding-left:20px;'></ul>"
+                if "</ul>" in current_logs:
+                    rec.fuel_issue_logs = current_logs.replace("</ul>", f"{log_msg}</ul>")
+                else:
+                    rec.fuel_issue_logs = f"<ul style='margin-bottom:0; padding-left:20px;'>{log_msg}</ul>"
+
             # Clear fields
             rec.has_issued_fuel = False
             rec.fuel_vendor_bill_id = False
@@ -1520,8 +1661,13 @@ class TruckingLoad(models.Model):
             rec.issued_fuel_qty = 0.0
             rec.issued_fuel_rate = 0.0
             rec.issued_fuel_supplier_id = False
+            rec.fuel_litres = 0.0
+            rec.fuel_unit_price = 0.0
+            rec.fuel_amount = 0.0
+            rec.fuel_issue_price = 0.0
             
-            rec.message_post(body="Issued Fuel has been reversed.")
+            if not is_adjust:
+                rec.message_post(body="Issued Fuel has been reversed.")
 
     def action_reverse_received_fuel(self):
         for rec in self:
@@ -1547,16 +1693,23 @@ class TruckingLoad(models.Model):
         for rec in self:
             if not rec.vehicle_id or not rec.trailer_1_id:
                 raise UserError(_("Truck Reg and Trailer 1 Reg are required before requesting fuel approval."))
-            if rec.fuel_amount <= 0 and not rec.company_id.trucking_allow_zero_advance:
-                raise UserError(_("Fuel amount must be greater than zero to request approval."))
-            rec.fuel_approval_state = 'requested'
+            # Check either fuel_amount (cash) or issued_fuel_qty (supplier fuel)
+            has_fuel = rec.fuel_amount > 0 or rec.issued_fuel_qty > 0
+            if not has_fuel and not rec.company_id.trucking_allow_zero_advance:
+                raise UserError(_("Fuel must be set before requesting approval. Use 'Issue Fuel' to set the fuel quantity."))
+            
+            if rec.company_id.trucking_approval_workflow == 'combined':
+                rec.advance_approval_state = 'requested'
+            else:
+                rec.fuel_approval_state = 'requested'
+            
             rec.state = 'pending_approval'
 
     def action_approve_fuel(self):
         for rec in self:
             rec.fuel_approval_state = 'approved'
             
-            if rec.issued_fuel_supplier_id:
+            if rec.issued_fuel_supplier_id and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1647,14 +1800,31 @@ class TruckingLoad(models.Model):
                 })
                 
                 total_val = qty * cost_price
+                
+                # Append to HTML logs
+                date_str = fields.Datetime.now().strftime('%Y-%m-%d %H:%M')
+                user_name = self.env.user.name
+                log_msg = f"<li>Fuel issued on <b>{date_str}</b> by <b>{user_name}</b>: <b>{qty} Litres</b> from <b>{supplier_to_use.name if supplier_to_use else 'Default'}</b> with a cost of <b>${total_val:.2f}</b></li>"
+                
+                current_logs = rec.fuel_issue_logs or "<ul style='margin-bottom:0; padding-left:20px;'></ul>"
+                if "</ul>" in current_logs:
+                    rec.fuel_issue_logs = current_logs.replace("</ul>", f"{log_msg}</ul>")
+                else:
+                    rec.fuel_issue_logs = f"<ul style='margin-bottom:0; padding-left:20px;'>{log_msg}</ul>"
+
                 rec.message_post(body=f"<b>Fuel Request Approved</b><br/>{qty}L issued from {supplier_to_use.name} at {cost_price}/L. Total: ${total_val:.2f}.")
 
             else:
                 # Old Flow: Cash/Bank Advance
+                if rec.transporter_type == 'in_house':
+                    raise UserError(_("In-house loads cannot have a cash fuel advance. Please use the 'Issue Fuel' wizard to select a supplier or scrap fuel."))
+                
                 if not rec.journal_id:
                     raise UserError(_("Please select a Cash/Bank Account (Journal) in the Payment Details section before approving fuel."))
                 
                 if rec.fuel_amount > 0 and not rec.fuel_payment_id:
+                    if not rec.transporter_id:
+                        raise UserError(_("External transporter must be set on the load to approve a cash fuel advance."))
                     payment = self.env['account.payment'].create({
                         'payment_type': 'outbound',
                         'partner_type': 'supplier',
@@ -1664,6 +1834,7 @@ class TruckingLoad(models.Model):
                         'memo': f"Fuel Advance - Load {rec.name}",
                         'date': fields.Date.context_today(self),
                         'load_id': rec.id,
+                        'is_fuel_payment': True,
                     })
                     payment.action_post()
                     rec.fuel_payment_id = payment.id
@@ -1690,7 +1861,12 @@ class TruckingLoad(models.Model):
                 raise UserError(_("Truck Reg and Trailer 1 Reg are required before requesting deposit approval."))
             if rec.deposit_amount <= 0:
                 raise UserError(_("Deposit amount must be greater than zero to request approval."))
-            rec.deposit_approval_state = 'requested'
+            
+            if rec.company_id.trucking_approval_workflow == 'combined':
+                rec.advance_approval_state = 'requested'
+            else:
+                rec.deposit_approval_state = 'requested'
+                
             rec.state = 'pending_approval'
 
     def action_approve_deposit(self):

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_trucking_fuel_adjust_wizard_form" model="ir.ui.view">
+        <field name="name">trucking.fuel.adjust.wizard.form</field>
+        <field name="model">trucking.fuel.adjust.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Adjust Fuel">
+                <div class="alert alert-info text-center" role="alert">
+                    Use this wizard to correct the actual fuel consumption. This will automatically reverse the previous fuel documents and create new ones based on the adjustments below.
+                </div>
+                <sheet>
+                    <group>
+                        <field name="load_id" invisible="1"/>
+                        <field name="allow_supplier" invisible="1"/>
+                        <field name="qty"/>
+                        <field name="cost_price"/>
+                        <field name="issue_price"/>
+                        <field name="total_cost"/>
+                        <field name="supplier_id" invisible="not allow_supplier"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Confirm" type="object" name="action_confirm" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_trucking_fuel_adjust_wizard" model="ir.actions.act_window">
+        <field name="name">Adjust Fuel</field>
+        <field name="res_model">trucking.fuel.adjust.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_load_id': active_id}</field>
+    </record>
+</odoo>

@@ -44,6 +44,7 @@ class TruckingFuelWizard(models.TransientModel):
             'fuel_litres': self.qty,
             'fuel_unit_price': self.cost_price,
             'fuel_amount': self.qty * self.issue_price,
+            'fuel_banner_text': 'Fuel Issued',
         })
         
         # Trigger fuel approval request automatically

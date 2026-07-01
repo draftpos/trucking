@@ -18,8 +18,6 @@ class TruckingTrailer(models.Model):
     def _onchange_ownership_type(self):
         if self.ownership_type == 'company':
             self.partner_id = self.env.company.partner_id
-        else:
-            self.partner_id = False
     @api.depends('reg_number', 'make', 'model')
     def _compute_display_name(self):
         for rec in self:

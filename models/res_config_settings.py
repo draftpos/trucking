@@ -49,6 +49,12 @@ class ResConfigSettings(models.TransientModel):
     trucking_auto_create_invoice = fields.Boolean(
         related='company_id.trucking_auto_create_invoice', readonly=False
     )
+    trucking_allow_unconfirmed_pod_invoice = fields.Boolean(
+        related='company_id.trucking_allow_unconfirmed_pod_invoice', readonly=False
+    )
+    trucking_customer_invoice_stage = fields.Selection(
+        related='company_id.trucking_customer_invoice_stage', readonly=False
+    )
     trucking_enable_driver_penalties = fields.Boolean(
         related='company_id.trucking_enable_driver_penalties', readonly=False
     )
