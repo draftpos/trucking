@@ -289,6 +289,7 @@
                                         <field name="display_total_per_load" string="Total per load" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="customer_invoices_html" widget="html" string="Invoice No" nolabel="0" readonly="state in ('delivered', 'invoiced')" />
                                         <field name="pod_confirmed" readonly="not pod" />
+                                        <field name="paid" string="Paid" readonly="1" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                                         <field name="customer_balance" string="Balance" readonly="state in ('delivered', 'invoiced')" />
                                     </group>
                                 </div>
