@@ -84,14 +84,57 @@ class ResCompany(models.Model):
         domain="[('type', '=', 'service')]"
     )
 
-    trucking_mandatory_field_ids = fields.One2many('trucking.mandatory.field', 'company_id', string='Mandatory Fields')
+    trucking_mandatory_field_ids = fields.One2many(
+        'trucking.mandatory.field', 'company_id', string='Mandatory Fields'
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
-        companies = super(ResCompany, self).create(vals_list)
-        for company in companies:
-            company._setup_default_mandatory_fields()
+        companies = super().create(vals_list)
+        companies.sudo()._init_default_mandatory_fields()
         return companies
+
+    def _init_default_mandatory_fields(self):
+        # Only run for companies that have no mandatory fields configured
+        ModelField = self.env['ir.model.fields']
+        MandatoryField = self.env['trucking.mandatory.field']
+
+        # Get field definitions from the model
+        fields_to_add = {
+            'inhouse': [
+                'route_id', 'booking_date', 'expected_loading_date', 'expected_delivery_date',
+                'date_loaded', 'vehicle_id', 'trailer_1_id', 'driver_id', 'commission_type',
+                'customer_id', 'customer_rate', 'qty_tonnes', 'delivery_date'
+            ],
+            'external': [
+                'route_id', 'booking_date', 'expected_loading_date', 'expected_delivery_date',
+                'date_loaded', 'transporter_id', 'vehicle_id', 'driver_id', 'transporter_rate',
+                'qty_tonnes', 'customer_id', 'customer_rate', 'delivery_date'
+            ]
+        }
+
+        for company in self:
+            if MandatoryField.search_count([('company_id', '=', company.id)]) > 0:
+                continue
+
+            for load_type, field_names in fields_to_add.items():
+                for field_name in field_names:
+                    field = ModelField.search([('model', '=', 'trucking.load'), ('name', '=', field_name)], limit=1)
+                    if not field:
+                        continue
+                    
+                    # Everything is required on save/confirm, except delivery_date which is only required on deliver
+                    is_save = is_confirm = (field_name != 'delivery_date')
+                    is_deliver = True
+
+                    MandatoryField.create({
+                        'company_id': company.id,
+                        'load_type': load_type,
+                        'field_id': field.id,
+                        'is_save': is_save,
+                        'is_confirm': is_confirm,
+                        'is_deliver': is_deliver
+                    })
 
     def _setup_default_mandatory_fields(self):
         self.ensure_one()
