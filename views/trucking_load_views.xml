@@ -296,8 +296,15 @@
                         </page>
                         <page string="Expenses" name="expenses">
                             <div class="row mb-3" style="margin-top: 10px;">
-                                <div class="col-12 text-end">
-                                    <h2 style="font-weight: bold;">
+                                <div class="col-6">
+                                    <group>
+                                        <field name="total_expenses" string="Other Expenses" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                        <field name="issued_fuel_cost" string="Fuel Cost" widget="monetary" options="{'currency_field': 'currency_id'}" invisible="transporter_type != 'in_house'"/>
+                                        <field name="total_commission" string="Driver Commission" widget="monetary" options="{'currency_field': 'currency_id'}" invisible="transporter_type != 'in_house'"/>
+                                    </group>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <h2 style="font-weight: bold; margin-top: 20px;">
                                         Total Expenses: <field name="total_all_expenses" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                                     </h2>
                                 </div>

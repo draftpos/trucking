@@ -830,8 +830,10 @@ class TruckingLoad(models.Model):
                 if uninvoiced_amount < 0:
                     uninvoiced_amount = 0
                 
-                rec.paid = paid_so + manual_paid
-                rec.customer_balance = uninvoiced_amount + residual_so - manual_paid
+                # We do NOT add manual_paid here because any manual payment properly registered
+                # is already linked to the invoices, so its value is reflected in paid_invoices.
+                rec.paid = paid_so
+                rec.customer_balance = uninvoiced_amount + residual_so
             else:
                 rec.paid = manual_paid
                 rec.customer_balance = rec.invoiced_amount - rec.paid
@@ -868,10 +870,10 @@ class TruckingLoad(models.Model):
                         perc = (inv.amount_untaxed / rec.invoiced_amount) * 100
                         if 99 <= perc <= 101:
                             pct = "(100%)"
-                        elif inv.move_type == 'out_refund':
-                            pct = f"(Balance {int(round(perc))}%)"
-                        else:
+                        elif abs(perc - rec.deposit_percentage) <= 1:
                             pct = f"({int(round(perc))}% Deposit)"
+                        else:
+                            pct = f"({int(round(perc))}% Balance)"
 
                     symbol = inv.currency_id.symbol or '$'
                     amount_due = inv.amount_residual if inv.amount_residual > 0 else inv.amount_total
