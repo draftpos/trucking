@@ -795,8 +795,12 @@ class TruckingLoad(models.Model):
                         balance -= rec.fuel_sales_invoice_id.amount_residual
                     else:
                         balance -= rec.fuel_amount
+            else:
+                # If bill is not yet generated, calculate mathematically
+                base_total = rec.total_per_load - variance_val
+                balance = base_total - rec.deposit_amount - rec.fuel_amount
                 
-                rec.transporter_balance = balance
+            rec.transporter_balance = balance
 
     @api.depends('sale_order_id.invoice_ids.state', 'sale_order_id.invoice_ids.amount_total', 'sale_order_id.invoice_ids.amount_residual', 'sale_order_id.invoice_ids.payment_state', 'payment_ids.state', 'payment_ids.amount', 'qty_tonnes', 'customer_rate', 'bill_customer_qty', 'delivered_qty', 'transporter_type')
     def _compute_invoiced_amount(self):
@@ -867,19 +871,21 @@ class TruckingLoad(models.Model):
                     lambda i: i.state != 'cancel'
                 ).sorted('create_date')
                 
+                out_invoices = all_moves.filtered(lambda i: i.move_type == 'out_invoice').sorted('create_date')
+                
                 for inv in all_moves:
                     # Skip pure internal reconciliation credit notes (amount_residual == 0 or they are fully reconciled)
                     if inv.move_type == 'out_refund' and inv.payment_state in ('paid', 'in_payment'):
                         continue
                     pct = ""
                     if rec.client_invoicing_rule == 'deposit_split' and rec.invoiced_amount:
-                        perc = (inv.amount_untaxed / rec.invoiced_amount) * 100
-                        if 99 <= perc <= 101:
-                            pct = "(100%)"
-                        elif abs(perc - rec.deposit_percentage) <= 1:
-                            pct = f"({int(round(perc))}% Deposit)"
-                        else:
-                            pct = f"({int(round(perc))}% Balance)"
+                        if inv.move_type == 'out_invoice':
+                            if out_invoices and inv.id == out_invoices[0].id:
+                                pct = "(Deposit)"
+                            else:
+                                pct = "(Balance)"
+                        elif inv.move_type == 'out_refund':
+                            pct = "(Credit Note)"
 
                     symbol = inv.currency_id.symbol or '$'
                     amount_due = inv.amount_residual if inv.amount_residual > 0 else inv.amount_total
