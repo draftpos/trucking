@@ -70,6 +70,13 @@ class ResCompany(models.Model):
         ('separate', 'Separate Deposit and Fuel Approvals')
     ], string="Approval Workflow", default='combined')
 
+    # Deliveries
+    trucking_allow_non_expense_deliveries = fields.Boolean(
+        "Allow Non-Expense Deliveries", 
+        default=False,
+        help="If enabled, allows delivering in-house loads without requiring any recorded expenses."
+    )
+
 
     # Driver Commission Defaults
     trucking_default_commission_type = fields.Selection([

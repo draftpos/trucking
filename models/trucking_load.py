@@ -924,10 +924,10 @@ class TruckingLoad(models.Model):
             if rec.state not in ('in_progress', 'overdue'):
                 continue
                 
-            if rec.transporter_type == 'in_house':
+            if rec.transporter_type == 'in_house' and not rec.company_id.trucking_allow_non_expense_deliveries:
                 if not any(exp.amount > 0 for exp in rec.expense_ids):
                     raise UserError(_("For In-House loads, you must record at least one expense with an amount greater than zero before delivering."))
-                    
+
             if rec.transporter_type == 'external' and rec.delivered_qty <= 0:
                 raise UserError(_("Please set a valid Delivered Qty before delivering."))
             if not rec.product_id:
