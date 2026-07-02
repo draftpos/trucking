@@ -1122,6 +1122,19 @@ class TruckingLoad(models.Model):
                                             import logging
                                             logging.getLogger(__name__).error(f"Reconciliation error: {e}")
                                             pass
+                                            
+                        # Also reconcile fuel credit note if it exists
+                        if rec.fuel_sales_invoice_id and rec.fuel_sales_invoice_id.state == 'posted':
+                            fuel_lines = rec.fuel_sales_invoice_id.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
+                            for f_line in fuel_lines:
+                                bill_lines = bill.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
+                                if bill_lines:
+                                    try:
+                                        (bill_lines[0] | f_line).reconcile()
+                                    except Exception as e:
+                                        import logging
+                                        logging.getLogger(__name__).error(f"Fuel Reconciliation error: {e}")
+                                        pass
             
             rec.state = 'invoiced'
             return {
@@ -1326,7 +1339,7 @@ class TruckingLoad(models.Model):
                     if not rec.transporter_id:
                         raise UserError(_("External transporter must be set on the load to issue fuel."))
                     sales_invoice = self.env['account.move'].create({
-                        'move_type': 'out_invoice',
+                        'move_type': 'in_refund',
                         'partner_id': rec.transporter_id.id,
                         'invoice_date': fields.Date.context_today(self),
                         'ref': f"Fuel Advance {rec.name}",
@@ -1338,6 +1351,20 @@ class TruckingLoad(models.Model):
                         })]
                     })
                     sales_invoice.action_post()
+                    
+                    # Auto-reconcile with transporter bill if it exists
+                    if rec.transporter_bill_id and rec.transporter_bill_id.state == 'posted':
+                        payable_account = rec.transporter_bill_id.line_ids.filtered(lambda l: l.account_id.account_type == 'liability_payable')
+                        if payable_account:
+                            payable_account = payable_account[0].account_id
+                            credit_lines = sales_invoice.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
+                            bill_lines = rec.transporter_bill_id.line_ids.filtered(lambda l: l.account_id == payable_account and not l.reconciled)
+                            for c_line in credit_lines:
+                                if bill_lines:
+                                    try:
+                                        (bill_lines[0] | c_line).reconcile()
+                                    except Exception:
+                                        pass
                     
                 rec.write({
                     'has_issued_fuel': True,
@@ -1668,6 +1695,7 @@ class TruckingLoad(models.Model):
             rec.fuel_scrap_id = False
             rec.issued_fuel_qty = 0.0
             rec.issued_fuel_rate = 0.0
+            rec.fuel_issue_logs = False
             rec.issued_fuel_supplier_id = False
             rec.fuel_litres = 0.0
             rec.fuel_unit_price = 0.0
