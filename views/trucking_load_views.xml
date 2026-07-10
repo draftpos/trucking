@@ -165,7 +165,7 @@
                                             <button name="%(action_trucking_fuel_wizard)d" type="action" string="Issue Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="has_issued_fuel" />
                                             <button name="action_dummy_issue_fuel_error" type="object" string="Fuel Issued Already" class="btn-secondary text-muted" invisible="not has_issued_fuel" />
                                             <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="not has_issued_fuel" />
-                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" />
+                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" groups="trucking.group_trucking_reverse_fuel" />
                                         </div>
                                         <div invisible="not has_issued_fuel" colspan="2" class="alert alert-info mt-2" role="alert" style="padding: 10px;">
                                             <field name="fuel_issue_logs" nolabel="1" readonly="1"/>
@@ -264,8 +264,8 @@
                                             <button name="action_dummy_issue_fuel_error" type="object" string="Fuel Issued Already" class="btn-secondary text-muted" invisible="not has_issued_fuel" />
                                             <button name="%(action_trucking_fuel_adjust_wizard)d" type="action" string="Adjust Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" invisible="not has_issued_fuel" />
                                             <button name="%(action_trucking_receive_fuel_wizard)d" type="action" string="Receive Fuel" class="btn-secondary" context="{'default_load_id': id}" groups="trucking.group_trucking_issue_fuel" />
-                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" />
-                                            <button name="action_reverse_received_fuel" type="object" string="Reverse Received Fuel" class="btn-danger" invisible="not receive_fuel_logs" />
+                                            <button name="action_reverse_issued_fuel" type="object" string="Reverse Fuel" class="btn-danger" invisible="not has_issued_fuel" groups="trucking.group_trucking_reverse_fuel" />
+                                            <button name="action_reverse_received_fuel" type="object" string="Reverse Received Fuel" class="btn-danger" invisible="not receive_fuel_logs" groups="trucking.group_trucking_reverse_fuel" />
                                         </div>
                                         <!-- Fuel Approval Status for In-House -->
                                         <div class="mt-2" invisible="fuel_approval_state == 'none'">

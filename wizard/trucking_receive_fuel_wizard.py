@@ -21,6 +21,9 @@ class TruckingReceiveFuelWizard(models.TransientModel):
 
     def action_confirm(self):
         self.ensure_one()
+        if not self.env.su and not self.env.user.has_group('trucking.group_trucking_issue_fuel'):
+            from odoo.exceptions import AccessError
+            raise AccessError(_("You do not have permission to receive fuel."))
         if self.qty <= 0 or self.cost_price <= 0:
             raise UserError(_("Quantity and Rate must be greater than zero."))
             

@@ -1272,6 +1272,14 @@ class TruckingLoad(models.Model):
 
     def action_approve_advance(self):
         for rec in self:
+            if not self.env.su:
+                if rec.fuel_amount > 0 and not self.env.user.has_group('trucking.group_trucking_fuel_approver'):
+                    from odoo.exceptions import AccessError
+                    raise AccessError(_("You do not have permission to approve fuel advances."))
+                if rec.deposit_amount > 0 and not self.env.user.has_group('trucking.group_trucking_deposit_approver'):
+                    from odoo.exceptions import AccessError
+                    raise AccessError(_("You do not have permission to approve deposit advances."))
+
             rec.advance_approval_state = 'approved'
             
             # Fuel Payment / Fuel Issue Logic
@@ -1651,6 +1659,10 @@ class TruckingLoad(models.Model):
 
     def action_reverse_issued_fuel(self):
         for rec in self:
+            if not self.env.su and not self.env.user.has_group('trucking.group_trucking_reverse_fuel'):
+                from odoo.exceptions import AccessError
+                raise AccessError(_("You do not have permission to reverse fuel."))
+
             # Cancel documents
             if rec.fuel_vendor_bill_id and rec.fuel_vendor_bill_id.state == 'posted':
                 rec.fuel_vendor_bill_id.button_draft()
@@ -1713,6 +1725,10 @@ class TruckingLoad(models.Model):
 
     def action_reverse_received_fuel(self):
         for rec in self:
+            if not self.env.su and not self.env.user.has_group('trucking.group_trucking_reverse_fuel'):
+                from odoo.exceptions import AccessError
+                raise AccessError(_("You do not have permission to reverse received fuel."))
+
             # Find journal entries related to receiving fuel for this load
             moves = self.env['account.move'].search([
                 ('ref', 'ilike', f"Receive Fuel: {rec.name}"),
@@ -1749,6 +1765,10 @@ class TruckingLoad(models.Model):
 
     def action_approve_fuel(self):
         for rec in self:
+            if not self.env.su and not self.env.user.has_group('trucking.group_trucking_fuel_approver'):
+                from odoo.exceptions import AccessError
+                raise AccessError(_("You do not have permission to approve fuel."))
+
             rec.fuel_approval_state = 'approved'
             
             if rec.issued_fuel_supplier_id and not rec.has_issued_fuel:
@@ -1913,6 +1933,10 @@ class TruckingLoad(models.Model):
 
     def action_approve_deposit(self):
         for rec in self:
+            if not self.env.su and not self.env.user.has_group('trucking.group_trucking_deposit_approver'):
+                from odoo.exceptions import AccessError
+                raise AccessError(_("You do not have permission to approve deposits."))
+
             if not rec.journal_id:
                 raise UserError(_("Please select a Cash/Bank Account (Journal) in the Payment Details section before approving the deposit."))
             rec.deposit_approval_state = 'approved'
