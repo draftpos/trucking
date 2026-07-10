@@ -262,7 +262,7 @@ class TruckingLoad(models.Model):
             company = rec.company_id or self.env.company
             load_type = 'inhouse' if rec.transporter_type == 'in_house' else 'external'
             
-            mandatory_records = self.env['trucking.mandatory.field'].search([
+            mandatory_records = self.env['trucking.mandatory.field'].sudo().search([
                 ('company_id', '=', company.id),
                 ('load_type', '=', load_type)
             ])
@@ -300,7 +300,7 @@ class TruckingLoad(models.Model):
             elif stage == 'delivery':
                 domain.append(('is_deliver', '=', True))
                 
-            mandatory_records = self.env['trucking.mandatory.field'].search(domain)
+            mandatory_records = self.env['trucking.mandatory.field'].sudo().search(domain)
             fields_to_check = mandatory_records.mapped('field_id')
                     
             missing_fields = []
