@@ -232,6 +232,8 @@ class TruckingLoad(models.Model):
         ('percentage', 'Percentage of Net Profit')
     ], string='Commission Type', default='fixed', tracking=True)
     trucking_enable_driver_penalties = fields.Boolean(related='company_id.trucking_enable_driver_penalties')
+    trucking_enable_demurrage = fields.Boolean(related='company_id.trucking_enable_demurrage')
+    trucking_enable_transporter_penalties = fields.Boolean(related='company_id.trucking_enable_transporter_penalties')
     penalty_amount = fields.Float(string='Penalty Amount', tracking=True)
     penalty_reason = fields.Char(string='Penalty Reason', tracking=True)
 
