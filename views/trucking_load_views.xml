@@ -30,6 +30,9 @@
                 <header>
                     <button name="%(action_trucking_receive_fuel_wizard)d" string="Receive Fuel" type="action" class="btn-secondary" invisible="state in ('draft', 'delivered', 'invoiced')" groups="trucking.group_trucking_issue_fuel"/>
                     
+                    <button name="%(trucking.action_trucking_demurrage_wizard)d" string="Add Demurrage" type="action" context="{'default_load_id': id, 'default_charge_type': 'demurrage'}" invisible="not trucking_enable_demurrage or transporter_type == 'in_house'"/>
+                    <button name="%(trucking.action_trucking_penalty_wizard)d" string="Add Penalty" type="action" context="{'default_load_id': id, 'default_charge_type': 'penalty'}" invisible="not trucking_enable_transporter_penalties or transporter_type == 'in_house'"/>
+                    
                     <!-- Combined Advance Approvals -->
                     <button name="action_request_advance_approval" string="Request Advance Approval" type="object" class="oe_highlight" invisible="trucking_approval_workflow == 'separate' or state not in ('draft', 'pending_approval', 'rejected', 'in_progress', 'upcoming') or advance_approval_state not in ('none', 'rejected') or transporter_type == 'in_house'" />
                     <button name="action_approve_advance" string="Approve Advance" type="object" class="btn-success" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'requested' or transporter_type == 'in_house'" groups="trucking.group_trucking_deposit_approver,trucking.group_trucking_fuel_approver" />
@@ -116,6 +119,28 @@
 
 
                     <notebook>
+                        <page string="Extra Charges" name="extra_charges" invisible="not trucking_enable_demurrage and not trucking_enable_transporter_penalties">
+                            <group>
+                                <group>
+                                    <field name="total_demurrage" invisible="not trucking_enable_demurrage"/>
+                                </group>
+                                <group>
+                                    <field name="total_penalty" invisible="not trucking_enable_transporter_penalties"/>
+                                </group>
+                            </group>
+                            <field name="charge_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="create_date" string="Date"/>
+                                    <field name="charge_type"/>
+                                    <field name="amount"/>
+                                    <field name="reason"/>
+                                    <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'billed'"/>
+                                    <field name="vendor_bill_id"/>
+                                    <field name="customer_invoice_id"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Load" name="load">
                             <div class="row mt-3" invisible="transporter_type == 'in_house'">
                                 

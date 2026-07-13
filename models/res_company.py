@@ -55,9 +55,25 @@ class ResCompany(models.Model):
         ('deliver', 'On Deliver (Generate all invoices at once)')
     ], string="Customer Invoice Stage (External)", default='confirm')
     
-    # Penalties
+    # Penalties & Demurrage
     trucking_enable_driver_penalties = fields.Boolean("Enable Driver Penalties")
-    
+    trucking_enable_transporter_penalties = fields.Boolean("Enable External Transporter Penalties")
+    trucking_enable_demurrage = fields.Boolean("Enable Demurrage for External Transporters")
+    trucking_charge_billing_timing = fields.Selection([
+        ('with_delivery', 'Bill with Main Delivery'),
+        ('on_entry', 'Bill Immediately on Entry')
+    ], string="Charge Billing Timing", default='with_delivery')
+    trucking_demurrage_product_id = fields.Many2one(
+        'product.product', 
+        string='Default Demurrage Product',
+        domain="[('type', '=', 'service')]"
+    )
+    trucking_penalty_product_id = fields.Many2one(
+        'product.product', 
+        string='Default Transporter Penalty Product',
+        domain="[('type', '=', 'service')]"
+    )
+
     # Commission Timing
     trucking_commission_calc_trigger = fields.Selection([
         ('delivery', 'Upon Delivery'),

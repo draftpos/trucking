@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_trucking_charge_wizard_form" model="ir.ui.view">
+        <field name="name">trucking.charge.wizard.form</field>
+        <field name="model">trucking.charge.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Add Extra Charge">
+                <group>
+                    <field name="load_id" invisible="1"/>
+                    <field name="charge_type" invisible="1"/>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="amount" widget="monetary"/>
+                    <field name="reason"/>
+                </group>
+                <footer>
+                    <button name="action_confirm" string="Confirm" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+
+    <record id="action_trucking_demurrage_wizard" model="ir.actions.act_window">
+        <field name="name">Add Demurrage</field>
+        <field name="res_model">trucking.charge.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_charge_type': 'demurrage'}</field>
+    </record>
+
+    <record id="action_trucking_penalty_wizard" model="ir.actions.act_window">
+        <field name="name">Add Penalty</field>
+        <field name="res_model">trucking.charge.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_charge_type': 'penalty'}</field>
+    </record>
+</odoo>

@@ -237,6 +237,24 @@ class TruckingLoad(models.Model):
 
     commission_percentage = fields.Float(string='Commission Percentage (%)', tracking=True)
 
+    charge_ids = fields.One2many('trucking.load.charge', 'load_id', string='Extra Charges')
+    total_demurrage = fields.Monetary(string='Total Demurrage', compute='_compute_total_charges', store=True)
+    total_penalty = fields.Monetary(string='Total Transporter Penalties', compute='_compute_total_charges', store=True)
+
+    @api.depends('charge_ids.amount', 'charge_ids.charge_type', 'charge_ids.state')
+    def _compute_total_charges(self):
+        for rec in self:
+            demurrage = 0.0
+            penalty = 0.0
+            for charge in rec.charge_ids:
+                if charge.state != 'cancelled':
+                    if charge.charge_type == 'demurrage':
+                        demurrage += charge.amount
+                    elif charge.charge_type == 'penalty':
+                        penalty += charge.amount
+            rec.total_demurrage = demurrage
+            rec.total_penalty = penalty
+
     @api.depends('commission_type', 'commission_percentage', 'gross_profit', 'penalty_amount')
     def _compute_driver_commission_amount_dynamic(self):
         for rec in self:
@@ -1017,7 +1035,28 @@ class TruckingLoad(models.Model):
                         if so_line:
                             invoice_vals['invoice_line_ids'][0][2]['sale_line_ids'] = [(6, 0, [so_line.id])]
                         
+                        # Add extra charges (Demurrage/Penalties) if configured to bill with delivery
+                        company = rec.company_id
+                        if company.trucking_charge_billing_timing == 'with_delivery':
+                            draft_charges = rec.charge_ids.filtered(lambda c: c.state == 'draft')
+                            for charge in draft_charges:
+                                product = company.trucking_demurrage_product_id if charge.charge_type == 'demurrage' else company.trucking_penalty_product_id
+                                if not product:
+                                    continue
+                                invoice_vals['invoice_line_ids'].append((0, 0, {
+                                    'product_id': product.id,
+                                    'name': f"{dict(charge._fields['charge_type'].selection).get(charge.charge_type)} - {charge.reason} ({rec.name})",
+                                    'quantity': 1,
+                                    'price_unit': charge.amount,
+                                    'analytic_distribution': analytic_distribution,
+                                }))
+                        
                         invoice = self.env['account.move'].create(invoice_vals)
+                        
+                        if company.trucking_charge_billing_timing == 'with_delivery':
+                            for charge in draft_charges:
+                                charge.customer_invoice_id = invoice.id
+                                charge.state = 'billed'
                         if invoice.state == 'draft':
                             invoice.action_post()
                     else:
@@ -1071,6 +1110,25 @@ class TruckingLoad(models.Model):
                     'analytic_distribution': analytic_distribution,
                 })]
                 
+                
+                # Add extra charges (Demurrage/Penalties) if configured to bill with delivery
+                company = rec.company_id
+                if company.trucking_charge_billing_timing == 'with_delivery':
+                    draft_charges = rec.charge_ids.filtered(lambda c: c.state == 'draft')
+                    for charge in draft_charges:
+                        product = company.trucking_demurrage_product_id if charge.charge_type == 'demurrage' else company.trucking_penalty_product_id
+                        if not product:
+                            continue
+                        po_lines.append((0, 0, {
+                            'product_id': product.id,
+                            'name': f"{dict(charge._fields['charge_type'].selection).get(charge.charge_type)} - {charge.reason} ({rec.name})",
+                            'product_qty': 1,
+                            'qty_received': 1,
+                            'price_unit': charge.amount,
+                            'tax_ids': False,
+                            'analytic_distribution': analytic_distribution,
+                        }))
+
                 if rec.shortages > 0:
                     po_lines.append((0, 0, {
                         'product_id': rec.product_id.id,
@@ -1110,6 +1168,12 @@ class TruckingLoad(models.Model):
                             for line in bill.invoice_line_ids:
                                 line.analytic_distribution = analytic_distribution
                     rec.transporter_bill_id = bill.id
+                    
+                    if company.trucking_charge_billing_timing == 'with_delivery':
+                        draft_charges = rec.charge_ids.filtered(lambda c: c.state == 'draft')
+                        for charge in draft_charges:
+                            charge.vendor_bill_id = bill.id
+                            charge.state = 'billed'
 
                     payable_account = bill.line_ids.filtered(lambda l: l.account_id.account_type == 'liability_payable')
                     if payable_account:

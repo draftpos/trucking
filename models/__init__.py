@@ -8,6 +8,7 @@ from . import trucking_load_expense
 
 from . import account_payment
 from . import trucking_load
+from . import trucking_load_charge
 from . import trucking_load_border
 from . import res_partner
 from . import account_move

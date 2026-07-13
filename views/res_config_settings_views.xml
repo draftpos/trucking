@@ -47,6 +47,21 @@
                         <setting help="Default Service Product for Driver Commission (Used on Vendor Bills)">
                             <field name="trucking_default_driver_commission_product_id"/>
                         </setting>
+                        <setting help="Enable Demurrage for External Transporters">
+                            <field name="trucking_enable_demurrage"/>
+                        </setting>
+                        <setting help="Enable External Transporter Penalties">
+                            <field name="trucking_enable_transporter_penalties"/>
+                        </setting>
+                        <setting help="Timing for Billing Demurrage/Penalties" invisible="not trucking_enable_demurrage and not trucking_enable_transporter_penalties">
+                            <field name="trucking_charge_billing_timing"/>
+                        </setting>
+                        <setting help="Default Demurrage Product" invisible="not trucking_enable_demurrage">
+                            <field name="trucking_demurrage_product_id"/>
+                        </setting>
+                        <setting help="Default Transporter Penalty Product" invisible="not trucking_enable_transporter_penalties">
+                            <field name="trucking_penalty_product_id"/>
+                        </setting>
                     </block>
                     
                     <block title="Analytic Settings" name="trucking_analytics">

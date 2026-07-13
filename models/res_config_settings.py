@@ -58,6 +58,22 @@ class ResConfigSettings(models.TransientModel):
     trucking_enable_driver_penalties = fields.Boolean(
         related='company_id.trucking_enable_driver_penalties', readonly=False
     )
+    trucking_enable_transporter_penalties = fields.Boolean(
+        related='company_id.trucking_enable_transporter_penalties', readonly=False
+    )
+    trucking_enable_demurrage = fields.Boolean(
+        related='company_id.trucking_enable_demurrage', readonly=False
+    )
+    trucking_charge_billing_timing = fields.Selection(
+        related='company_id.trucking_charge_billing_timing', readonly=False
+    )
+    trucking_demurrage_product_id = fields.Many2one(
+        related='company_id.trucking_demurrage_product_id', readonly=False
+    )
+    trucking_penalty_product_id = fields.Many2one(
+        related='company_id.trucking_penalty_product_id', readonly=False
+    )
+
     trucking_commission_calc_trigger = fields.Selection(
         related='company_id.trucking_commission_calc_trigger', readonly=False
     )

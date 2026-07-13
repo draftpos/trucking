@@ -20,6 +20,7 @@
         "wizard/trucking_fuel_wizard_views.xml",
         "wizard/trucking_fuel_adjust_wizard_views.xml",
         "wizard/trucking_receive_fuel_wizard_views.xml",
+        "wizard/trucking_charge_wizard_views.xml",
 
         "views/trucking_load_views.xml",
         "views/trucking_report_views.xml",

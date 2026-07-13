@@ -17,3 +17,5 @@ access_trucking_zero_confirm_wizard,trucking.zero.confirm.wizard,model_trucking_
 access_trucking_fuel_adjust_wizard,trucking.fuel.adjust.wizard,model_trucking_fuel_adjust_wizard,trucking.group_trucking_user,1,1,1,1
 
 trucking.access_trucking_mandatory_field,access_trucking_mandatory_field,trucking.model_trucking_mandatory_field,base.group_user,1,1,1,1
+access_trucking_load_charge,trucking.load.charge,model_trucking_load_charge,base.group_user,1,1,1,1
+access_trucking_charge_wizard,trucking.charge.wizard,model_trucking_charge_wizard,base.group_user,1,1,1,1
