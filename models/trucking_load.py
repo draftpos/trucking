@@ -16,7 +16,7 @@ class TruckingLoad(models.Model):
     _name = 'trucking.load'
     _description = 'Trucking Load'
     _inherit = ['mail.thread', 'mail.activity.mixin']
-    _order = 'id desc'
+    _order = 'name asc'
 
     # Header / State
     name = fields.Char(string='Order No', required=True, copy=False, readonly=True, default=lambda self: self.env['ir.sequence'].next_by_code('trucking.load') or _('New'))
