@@ -19,7 +19,7 @@ class TruckingLoad(models.Model):
     _order = 'name asc'
 
     # Header / State
-    name = fields.Char(string='Order No', required=True, copy=False, readonly=True, default=lambda self: self.env['ir.sequence'].next_by_code('trucking.load') or _('New'))
+    name = fields.Char(string='Order No', required=True, copy=False, readonly=True, default='New')
     state = fields.Selection([
         ('draft', 'Draft'),
         ('pending_approval', 'Pending Approval'),
