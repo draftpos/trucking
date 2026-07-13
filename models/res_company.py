@@ -66,12 +66,14 @@ class ResCompany(models.Model):
     trucking_demurrage_product_id = fields.Many2one(
         'product.product', 
         string='Default Demurrage Product',
-        domain="[('type', '=', 'service')]"
+        domain="[('type', '=', 'service')]",
+        default=lambda self: self.env.ref('trucking.product_trucking_demurrage', raise_if_not_found=False)
     )
     trucking_penalty_product_id = fields.Many2one(
         'product.product', 
         string='Default Transporter Penalty Product',
-        domain="[('type', '=', 'service')]"
+        domain="[('type', '=', 'service')]",
+        default=lambda self: self.env.ref('trucking.product_trucking_penalty', raise_if_not_found=False)
     )
 
     # Commission Timing

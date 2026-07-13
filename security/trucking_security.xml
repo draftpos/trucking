@@ -75,4 +75,24 @@
         <field name="privilege_id" ref="res_groups_privilege_reverse_fuel"/>
         <field name="implied_ids" eval="[(4, ref('group_trucking_user'))]"/>
     </record>
+
+    <!-- Demurrage Approver Checkbox -->
+    <record id="res_groups_privilege_demurrage_approver" model="res.groups.privilege">
+        <field name="name">Demurrage Approver</field>
+        <field name="category_id" ref="module_category_trucking"/>
+    </record>
+    <record id="group_trucking_demurrage_approver" model="res.groups">
+        <field name="name">Allowed</field>
+        <field name="privilege_id" ref="res_groups_privilege_demurrage_approver"/>
+    </record>
+
+    <!-- Penalty Approver Checkbox -->
+    <record id="res_groups_privilege_penalty_approver" model="res.groups.privilege">
+        <field name="name">Penalty Approver</field>
+        <field name="category_id" ref="module_category_trucking"/>
+    </record>
+    <record id="group_trucking_penalty_approver" model="res.groups">
+        <field name="name">Allowed</field>
+        <field name="privilege_id" ref="res_groups_privilege_penalty_approver"/>
+    </record>
 </odoo>

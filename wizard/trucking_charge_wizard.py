@@ -20,19 +20,29 @@ class TruckingChargeWizard(models.TransientModel):
         if self.amount <= 0:
             raise UserError(_("Amount must be strictly positive."))
             
+        # Check permissions
+        has_right = False
+        if self.charge_type == 'demurrage' and self.env.user.has_group('trucking.group_trucking_demurrage_approver'):
+            has_right = True
+        elif self.charge_type == 'penalty' and self.env.user.has_group('trucking.group_trucking_penalty_approver'):
+            has_right = True
+
+        state = 'approved' if has_right else 'requested'
+
         charge = self.env['trucking.load.charge'].create({
             'load_id': self.load_id.id,
             'charge_type': self.charge_type,
             'amount': self.amount,
             'reason': self.reason,
-            'state': 'draft'
+            'state': state
         })
         
-        # Check if we should bill immediately
-        timing = self.load_id.company_id.trucking_charge_billing_timing
-        if timing == 'on_entry' or self.load_id.state in ['delivered', 'invoiced']:
-            # Create bills now
-            self._generate_standalone_bills(charge)
+        # Check if we should bill immediately (only if approved)
+        if state == 'approved':
+            timing = self.load_id.company_id.trucking_charge_billing_timing
+            if timing == 'on_entry' or self.load_id.state in ['delivered', 'invoiced']:
+                # Create bills now
+                self._generate_standalone_bills(charge)
             
         return {'type': 'ir.actions.act_window_close'}
 

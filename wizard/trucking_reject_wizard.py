@@ -6,7 +6,14 @@ class TruckingRejectWizard(models.TransientModel):
 
     reason = fields.Text(string='Reason', required=True)
     load_id = fields.Many2one('trucking.load', string='Load', required=True)
-    reject_type = fields.Selection([('fuel', 'Fuel'), ('deposit', 'Deposit'), ('advance', 'Advance')], string='Reject Type', required=True)
+    reject_type = fields.Selection([
+        ('fuel', 'Fuel'), 
+        ('deposit', 'Deposit'), 
+        ('advance', 'Advance'),
+        ('demurrage', 'Demurrage'),
+        ('penalty', 'Penalty')
+    ], string='Reject Type', required=True)
+    charge_id = fields.Many2one('trucking.load.charge', string='Charge Line')
 
     def action_reject(self):
         self.ensure_one()
@@ -26,4 +33,6 @@ class TruckingRejectWizard(models.TransientModel):
             load.advance_reject_reason = self.reason
             load.state = 'rejected'
             load.message_post(body=f"<b>Advance Approval Rejected</b><br/>Reason: {self.reason}")
+        elif self.reject_type in ('demurrage', 'penalty') and self.charge_id:
+            self.charge_id.with_context(reject_reason=self.reason).action_reject()
         return {'type': 'ir.actions.act_window_close'}

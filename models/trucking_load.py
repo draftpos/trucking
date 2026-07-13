@@ -60,6 +60,61 @@ class TruckingLoad(models.Model):
     ], string='Deposit Approval Status', default='none', tracking=True)
     deposit_reject_reason = fields.Text(string='Deposit Reject Reason')
 
+    demurrage_approval_state = fields.Selection([
+        ('none', 'None'),
+        ('requested', 'Requested'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected')
+    ], string='Demurrage Approval Status', compute='_compute_charge_approval_states', store=True)
+    demurrage_banner_text = fields.Char(string='Demurrage Banner Text', compute='_compute_charge_approval_states', store=True)
+
+    penalty_approval_state = fields.Selection([
+        ('none', 'None'),
+        ('requested', 'Requested'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected')
+    ], string='Penalty Approval Status', compute='_compute_charge_approval_states', store=True)
+    penalty_banner_text = fields.Char(string='Penalty Banner Text', compute='_compute_charge_approval_states', store=True)
+
+    @api.depends('charge_ids.state', 'charge_ids.charge_type')
+    def _compute_charge_approval_states(self):
+        for rec in self:
+            # Demurrage
+            demurrages = rec.charge_ids.filtered(lambda c: c.charge_type == 'demurrage')
+            if not demurrages:
+                rec.demurrage_approval_state = 'none'
+                rec.demurrage_banner_text = ''
+            elif any(c.state == 'requested' for c in demurrages):
+                rec.demurrage_approval_state = 'requested'
+                rec.demurrage_banner_text = 'Demurrage Requested'
+            elif any(c.state == 'rejected' for c in demurrages):
+                rec.demurrage_approval_state = 'rejected'
+                rec.demurrage_banner_text = 'Demurrage Rejected'
+            elif all(c.state in ('approved', 'billed') for c in demurrages):
+                rec.demurrage_approval_state = 'approved'
+                rec.demurrage_banner_text = 'Demurrage Approved'
+            else:
+                rec.demurrage_approval_state = 'none'
+                rec.demurrage_banner_text = ''
+
+            # Penalty
+            penalties = rec.charge_ids.filtered(lambda c: c.charge_type == 'penalty')
+            if not penalties:
+                rec.penalty_approval_state = 'none'
+                rec.penalty_banner_text = ''
+            elif any(c.state == 'requested' for c in penalties):
+                rec.penalty_approval_state = 'requested'
+                rec.penalty_banner_text = 'Penalty Requested'
+            elif any(c.state == 'rejected' for c in penalties):
+                rec.penalty_approval_state = 'rejected'
+                rec.penalty_banner_text = 'Penalty Rejected'
+            elif all(c.state in ('approved', 'billed') for c in penalties):
+                rec.penalty_approval_state = 'approved'
+                rec.penalty_banner_text = 'Penalty Approved'
+            else:
+                rec.penalty_approval_state = 'none'
+                rec.penalty_banner_text = ''
+
     # 1. Loading Details
     date_loaded = fields.Datetime(string='Date Loaded', default=fields.Datetime.now)
     booking_date = fields.Date(string='Booking Date', default=fields.Date.context_today)
@@ -1040,8 +1095,8 @@ class TruckingLoad(models.Model):
                         # Add extra charges (Demurrage/Penalties) if configured to bill with delivery
                         company = rec.company_id
                         if company.trucking_charge_billing_timing == 'with_delivery':
-                            draft_charges = rec.charge_ids.filtered(lambda c: c.state == 'draft')
-                            for charge in draft_charges:
+                            pending_charges = rec.charge_ids.filtered(lambda c: c.state == 'approved')
+                            for charge in pending_charges:
                                 product = company.trucking_demurrage_product_id if charge.charge_type == 'demurrage' else company.trucking_penalty_product_id
                                 if not product:
                                     continue
@@ -1056,7 +1111,7 @@ class TruckingLoad(models.Model):
                         invoice = self.env['account.move'].create(invoice_vals)
                         
                         if company.trucking_charge_billing_timing == 'with_delivery':
-                            for charge in draft_charges:
+                            for charge in pending_charges:
                                 charge.customer_invoice_id = invoice.id
                                 charge.state = 'billed'
                         if invoice.state == 'draft':
@@ -1116,8 +1171,8 @@ class TruckingLoad(models.Model):
                 # Add extra charges (Demurrage/Penalties) if configured to bill with delivery
                 company = rec.company_id
                 if company.trucking_charge_billing_timing == 'with_delivery':
-                    draft_charges = rec.charge_ids.filtered(lambda c: c.state == 'draft')
-                    for charge in draft_charges:
+                    pending_charges = rec.charge_ids.filtered(lambda c: c.state == 'approved')
+                    for charge in pending_charges:
                         product = company.trucking_demurrage_product_id if charge.charge_type == 'demurrage' else company.trucking_penalty_product_id
                         if not product:
                             continue
@@ -1172,8 +1227,8 @@ class TruckingLoad(models.Model):
                     rec.transporter_bill_id = bill.id
                     
                     if company.trucking_charge_billing_timing == 'with_delivery':
-                        draft_charges = rec.charge_ids.filtered(lambda c: c.state == 'draft')
-                        for charge in draft_charges:
+                        pending_charges = rec.charge_ids.filtered(lambda c: c.state == 'approved')
+                        for charge in pending_charges:
                             charge.vendor_bill_id = bill.id
                             charge.state = 'billed'
 

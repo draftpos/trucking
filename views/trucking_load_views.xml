@@ -60,6 +60,12 @@
                     <div class="alert alert-info text-center" role="alert" invisible="not has_issued_fuel and fuel_banner_text != 'Fuel Reversed'" style="margin-bottom: 10px;">
                         <strong><field name="fuel_banner_text" nolabel="1" class="oe_inline" readonly="1" style="font-weight: bold;"/></strong> on <field name="fuel_issue_date" readonly="1"/> by <field name="fuel_issue_user_id" readonly="1" widget="many2one_avatar_user"/>
                     </div>
+                    <div class="alert alert-warning text-center" role="alert" invisible="demurrage_approval_state == 'none'" style="margin-bottom: 10px;">
+                        <strong><field name="demurrage_banner_text" nolabel="1" class="oe_inline" readonly="1" style="font-weight: bold;"/></strong>
+                    </div>
+                    <div class="alert alert-warning text-center" role="alert" invisible="penalty_approval_state == 'none'" style="margin-bottom: 10px;">
+                        <strong><field name="penalty_banner_text" nolabel="1" class="oe_inline" readonly="1" style="font-weight: bold;"/></strong>
+                    </div>
                     <field name="trucking_approval_workflow" invisible="1" />
                     <field name="mandatory_fields_json" invisible="1" />
                     <widget name="web_ribbon" title="DELAYED LOADING" bg_color="text-bg-danger" invisible="not is_delayed_loading" />
@@ -119,28 +125,7 @@
 
 
                     <notebook>
-                        <page string="Extra Charges" name="extra_charges" invisible="not trucking_enable_demurrage and not trucking_enable_transporter_penalties">
-                            <group>
-                                <group>
-                                    <field name="total_demurrage" invisible="not trucking_enable_demurrage"/>
-                                </group>
-                                <group>
-                                    <field name="total_penalty" invisible="not trucking_enable_transporter_penalties"/>
-                                </group>
-                            </group>
-                            <field name="charge_ids" readonly="1">
-                                <list>
-                                    <field name="name"/>
-                                    <field name="create_date" string="Date"/>
-                                    <field name="charge_type"/>
-                                    <field name="amount"/>
-                                    <field name="reason"/>
-                                    <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'billed'"/>
-                                    <field name="vendor_bill_id"/>
-                                    <field name="customer_invoice_id"/>
-                                </list>
-                            </field>
-                        </page>
+
                         <page string="Load" name="load">
                             <div class="row mt-3" invisible="transporter_type == 'in_house'">
                                 
@@ -366,6 +351,31 @@
                                     <field name="etd" optional="show" />
                                     <field name="atd" optional="show" />
                                     <field name="departure_status" decoration-danger="'Delayed' in departure_status" decoration-success="'On Time' in departure_status" optional="show" />
+                                </list>
+                            </field>
+                        </page>
+                        
+                        <page string="Extra Charges" name="extra_charges" invisible="not trucking_enable_demurrage and not trucking_enable_transporter_penalties">
+                            <group>
+                                <group>
+                                    <field name="total_demurrage" invisible="not trucking_enable_demurrage"/>
+                                </group>
+                                <group>
+                                    <field name="total_penalty" invisible="not trucking_enable_transporter_penalties"/>
+                                </group>
+                            </group>
+                            <field name="charge_ids" readonly="1">
+                                <list decoration-info="state == 'requested'" decoration-success="state in ('approved', 'billed')" decoration-danger="state == 'rejected'">
+                                    <field name="name"/>
+                                    <field name="create_date" string="Date"/>
+                                    <field name="charge_type"/>
+                                    <field name="amount"/>
+                                    <field name="reason"/>
+                                    <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'requested'" decoration-success="state in ('approved', 'billed')" decoration-danger="state == 'rejected'"/>
+                                    <button name="action_approve" type="object" icon="fa-check" string="Approve" class="btn-success" invisible="state != 'requested'"/>
+                                    <button name="%(trucking.action_trucking_reject_wizard)d" type="action" icon="fa-times" string="Reject" class="btn-danger" invisible="state != 'requested'" context="{'default_load_id': parent.id, 'default_charge_id': id, 'default_reject_type': charge_type}"/>
+                                    <field name="vendor_bill_id" optional="show"/>
+                                    <field name="customer_invoice_id" optional="show"/>
                                 </list>
                             </field>
                         </page>

@@ -22,10 +22,14 @@ class TruckingLoadCharge(models.Model):
     
     state = fields.Selection([
         ('draft', 'Draft'),
+        ('requested', 'Requested'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
         ('billed', 'Billed'),
         ('cancelled', 'Cancelled')
     ], string='Status', default='draft', tracking=True)
     
+    reject_reason = fields.Text(string='Reject Reason')
     vendor_bill_id = fields.Many2one('account.move', string='Transporter Vendor Bill', readonly=True)
     customer_invoice_id = fields.Many2one('account.move', string='Customer Invoice', readonly=True)
 
@@ -36,6 +40,31 @@ class TruckingLoadCharge(models.Model):
                 prefix = 'DEM' if vals.get('charge_type') == 'demurrage' else 'PEN'
                 vals['name'] = self.env['ir.sequence'].next_by_code('trucking.load.charge.seq') or f'{prefix}/New'
         return super().create(vals_list)
+
+    def action_approve(self):
+        for rec in self:
+            if rec.charge_type == 'demurrage' and not self.env.user.has_group('trucking.group_trucking_demurrage_approver'):
+                raise UserError(_("You do not have the right to approve Demurrage charges."))
+            if rec.charge_type == 'penalty' and not self.env.user.has_group('trucking.group_trucking_penalty_approver'):
+                raise UserError(_("You do not have the right to approve Penalty charges."))
+            if rec.state != 'requested':
+                raise UserError(_("Only requested charges can be approved."))
+            rec.state = 'approved'
+            rec.load_id.message_post(body=f"<b>{dict(self._fields['charge_type'].selection).get(rec.charge_type)} Approved:</b> {rec.amount} ({rec.reason})")
+
+    def action_reject(self):
+        # Allow passing reason via context if called from wizard, else default
+        reason = self._context.get('reject_reason', 'Rejected by Manager')
+        for rec in self:
+            if rec.charge_type == 'demurrage' and not self.env.user.has_group('trucking.group_trucking_demurrage_approver'):
+                raise UserError(_("You do not have the right to reject Demurrage charges."))
+            if rec.charge_type == 'penalty' and not self.env.user.has_group('trucking.group_trucking_penalty_approver'):
+                raise UserError(_("You do not have the right to reject Penalty charges."))
+            if rec.state != 'requested':
+                raise UserError(_("Only requested charges can be rejected."))
+            rec.state = 'rejected'
+            rec.reject_reason = reason
+            rec.load_id.message_post(body=f"<b>{dict(self._fields['charge_type'].selection).get(rec.charge_type)} Rejected:</b> {rec.amount} ({rec.reason})<br/>Reason: {reason}")
 
     def action_cancel(self):
         for rec in self:

@@ -29,6 +29,26 @@
             <field name="description_sale">Trucking and freight services.</field>
         </record>
 
+        <!-- Default Service Product for Demurrage -->
+        <record id="product_trucking_demurrage" model="product.product">
+            <field name="name">Demurrage</field>
+            <field name="type">service</field>
+            <field name="list_price">0.0</field>
+            <field name="standard_price">0.0</field>
+            <field name="uom_id" ref="uom.product_uom_unit"/>
+            <field name="description_sale">Demurrage charges.</field>
+        </record>
+
+        <!-- Default Service Product for Penalties -->
+        <record id="product_trucking_penalty" model="product.product">
+            <field name="name">Penalty</field>
+            <field name="type">service</field>
+            <field name="list_price">0.0</field>
+            <field name="standard_price">0.0</field>
+            <field name="uom_id" ref="uom.product_uom_unit"/>
+            <field name="description_sale">Penalty charges.</field>
+        </record>
+
         <!-- Cron Job for Overdue Loads -->
         <record id="ir_cron_check_overdue_loads" model="ir.cron">
             <field name="name">Trucking: Check Overdue Loads</field>
