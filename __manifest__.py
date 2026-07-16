@@ -21,12 +21,12 @@
         "wizard/trucking_fuel_adjust_wizard_views.xml",
         "wizard/trucking_receive_fuel_wizard_views.xml",
         "wizard/trucking_charge_wizard_views.xml",
+        "wizard/trucking_reject_wizard_views.xml",
 
         "views/trucking_load_views.xml",
         "views/trucking_report_views.xml",
         "views/account_payment_views.xml",
         "views/account_move_views.xml",
-        "wizard/trucking_reject_wizard_views.xml",
         "wizard/payment_load_warning_wizard_views.xml",
         "wizard/trucking_zero_confirm_wizard_views.xml",
         "views/trucking_menus.xml",
