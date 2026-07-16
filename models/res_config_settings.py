@@ -83,6 +83,9 @@ class ResConfigSettings(models.TransientModel):
     trucking_allow_non_expense_deliveries = fields.Boolean(
         related='company_id.trucking_allow_non_expense_deliveries', readonly=False
     )
+    trucking_allow_excess_delivered_qty = fields.Boolean(
+        related='company_id.trucking_allow_excess_delivered_qty', readonly=False
+    )
     trucking_analytic_strategy = fields.Selection(
         related='company_id.trucking_analytic_strategy', readonly=False
     )

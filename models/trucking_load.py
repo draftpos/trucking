@@ -820,8 +820,9 @@ class TruckingLoad(models.Model):
     @api.constrains('delivered_qty', 'qty_tonnes')
     def _check_delivered_qty(self):
         for rec in self:
-            if rec.delivered_qty > rec.qty_tonnes:
-                raise ValidationError(_("Delivered Qty cannot exceed Loaded Qty (Qty Tonnes)."))
+            if not rec.company_id.trucking_allow_excess_delivered_qty:
+                if rec.delivered_qty > rec.qty_tonnes:
+                    raise ValidationError(_("Delivered Qty cannot exceed Loaded Qty (Qty Tonnes)."))
 
     @api.constrains('trailer_1_id', 'trailer_2_id')
     def _check_duplicate_trailers(self):

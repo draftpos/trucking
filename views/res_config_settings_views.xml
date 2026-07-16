@@ -77,6 +77,9 @@
                         <setting help="Allow Non-Expense Deliveries for In-House loads">
                             <field name="trucking_allow_non_expense_deliveries"/>
                         </setting>
+                        <setting help="Allow Delivered Qty > Loaded Qty (for weighbridge variations)">
+                            <field name="trucking_allow_excess_delivered_qty"/>
+                        </setting>
                         <setting help="Allow picking a specific Supplier when issuing fuel">
                             <field name="trucking_allow_supplier_on_issue_fuel"/>
                         </setting>

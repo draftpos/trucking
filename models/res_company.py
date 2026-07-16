@@ -94,6 +94,11 @@ class ResCompany(models.Model):
         default=False,
         help="If enabled, allows delivering in-house loads without requiring any recorded expenses."
     )
+    trucking_allow_excess_delivered_qty = fields.Boolean(
+        "Allow Delivered Qty > Loaded Qty",
+        default=False,
+        help="If enabled, the system will not block delivery if the delivered quantity exceeds the loaded quantity (due to weighbridge variations)."
+    )
 
 
     # Driver Commission Defaults

@@ -18,6 +18,7 @@
                 </footer>
             </form>
         </field>
+    </record>
 
     <record id="action_trucking_demurrage_wizard" model="ir.actions.act_window">
         <field name="name">Add Demurrage</field>
