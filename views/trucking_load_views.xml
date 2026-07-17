@@ -325,7 +325,7 @@
                                 <list editable="bottom">
                                     <field name="date" optional="show" />
                                     <field name="account_id" optional="show" />
-                                    <field name="supplier_id" optional="show" />
+                                    <field name="supplier_id" optional="show" context="{'default_is_supplier': True}" />
                                     <field name="amount" optional="show" />
                                     <field name="doc_no" optional="show" />
                                     <field name="journal_id" optional="show" />
