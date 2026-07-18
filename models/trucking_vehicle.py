@@ -50,18 +50,17 @@ class TruckingVehicle(models.Model):
         records = super().create(vals_list)
         
         for record in records:
-            if record.company_id.trucking_auto_create_analytic_for_truck and record.reg_number:
-                plan_name = "In-House Transporters" if record.ownership_type == 'company' else "External Transporters"
-                analytic_plan = self.env['account.analytic.plan'].sudo().search([('name', '=', plan_name)], limit=1)
+            if self.env.company.trucking_auto_create_analytic_for_truck and record.reg_number:
+                analytic_plan = self.env.ref('analytic.analytic_plan_projects', raise_if_not_found=False)
                 if not analytic_plan:
-                    analytic_plan = self.env['account.analytic.plan'].sudo().create({'name': plan_name})
+                    analytic_plan = self.env['account.analytic.plan'].sudo().search([], limit=1)
                     
                 analytic_acc = self.env['account.analytic.account'].sudo().search([('name', '=', record.reg_number)], limit=1)
-                if not analytic_acc:
+                if not analytic_acc and analytic_plan:
                     self.env['account.analytic.account'].sudo().create({
                         'name': record.reg_number,
                         'plan_id': analytic_plan.id,
-                        'company_id': record.company_id.id,
+                        'company_id': self.env.company.id,
                     })
                     
         return records
