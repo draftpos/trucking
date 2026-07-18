@@ -71,6 +71,9 @@
                         <setting help="How should analytic accounts be tracked for Income and Expenses?">
                             <field name="trucking_analytic_strategy"/>
                         </setting>
+                        <setting help="Auto Create Analytic Account for New Trucks">
+                            <field name="trucking_auto_create_analytic_for_truck"/>
+                        </setting>
                     </block>
                     
                     <block title="Loads Settings" name="trucking_loads">

@@ -46,7 +46,25 @@ class TruckingVehicle(models.Model):
         for vals in vals_list:
             if vals.get('ownership_type') == 'company':
                 vals['partner_id'] = self.env.company.partner_id.id
-        return super().create(vals_list)
+        
+        records = super().create(vals_list)
+        
+        for record in records:
+            if record.company_id.trucking_auto_create_analytic_for_truck and record.reg_number:
+                plan_name = "In-House Transporters" if record.ownership_type == 'company' else "External Transporters"
+                analytic_plan = self.env['account.analytic.plan'].sudo().search([('name', '=', plan_name)], limit=1)
+                if not analytic_plan:
+                    analytic_plan = self.env['account.analytic.plan'].sudo().create({'name': plan_name})
+                    
+                analytic_acc = self.env['account.analytic.account'].sudo().search([('name', '=', record.reg_number)], limit=1)
+                if not analytic_acc:
+                    self.env['account.analytic.account'].sudo().create({
+                        'name': record.reg_number,
+                        'plan_id': analytic_plan.id,
+                        'company_id': record.company_id.id,
+                    })
+                    
+        return records
 
     def write(self, vals):
         if vals.get('ownership_type') == 'company':

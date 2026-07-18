@@ -38,6 +38,11 @@ class ResCompany(models.Model):
     ], string='External Fuel Process', default='scrap')
     
     # Analytic Settings
+    trucking_auto_create_analytic_for_truck = fields.Boolean(
+        string='Auto Create Analytic Account for New Trucks', 
+        default=False,
+        help="If enabled, an analytic account will be automatically created when a new truck is created."
+    )
     trucking_analytic_strategy = fields.Selection([
         ('truck', 'By Truck Registration'),
         ('transporter_type', 'By Transporter Type (In-House vs External)'),

@@ -87,6 +87,9 @@ class ResConfigSettings(models.TransientModel):
     trucking_allow_excess_delivered_qty = fields.Boolean(
         related='company_id.trucking_allow_excess_delivered_qty', readonly=False
     )
+    trucking_auto_create_analytic_for_truck = fields.Boolean(
+        related='company_id.trucking_auto_create_analytic_for_truck', readonly=False
+    )
     trucking_analytic_strategy = fields.Selection(
         related='company_id.trucking_analytic_strategy', readonly=False
     )
