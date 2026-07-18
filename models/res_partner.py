@@ -77,7 +77,7 @@ class ResPartner(models.Model):
             
             # Current month loads based on date_loaded
             current_month_loads = loads.filtered(
-                lambda l: l.date_loaded and l.date_loaded >= start_of_month
+                lambda l: l.date_loaded and l.date_loaded.date() >= start_of_month
             )
             partner.current_month_profit = sum(current_month_loads.mapped('gross_profit'))
 
