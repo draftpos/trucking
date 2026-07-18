@@ -64,6 +64,7 @@ class ResConfigSettings(models.TransientModel):
     trucking_enable_demurrage = fields.Boolean(
         related='company_id.trucking_enable_demurrage', readonly=False
     )
+    trucking_invoice_rate_source = fields.Selection(related='company_id.trucking_invoice_rate_source', readonly=False)
     trucking_charge_billing_timing = fields.Selection(
         related='company_id.trucking_charge_billing_timing', readonly=False
     )

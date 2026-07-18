@@ -32,6 +32,9 @@
                         <setting help="Determine when the customer invoice should be generated for External Transporters.">
                             <field name="trucking_customer_invoice_stage" widget="radio" />
                         </setting>
+                        <setting help="Select which rate to show on the Customer Invoice Report">
+                            <field name="trucking_invoice_rate_source" widget="radio" />
+                        </setting>
                         <setting help="When should percentage-based driver commissions be calculated?">
                             <field name="trucking_commission_calc_trigger"/>
                         </setting>

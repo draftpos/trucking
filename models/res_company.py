@@ -59,6 +59,10 @@ class ResCompany(models.Model):
     trucking_enable_driver_penalties = fields.Boolean("Enable Driver Penalties")
     trucking_enable_transporter_penalties = fields.Boolean("Enable External Transporter Penalties")
     trucking_enable_demurrage = fields.Boolean("Enable Demurrage for External Transporters")
+    trucking_invoice_rate_source = fields.Selection([
+        ('customer', 'Customer Rate'),
+        ('transporter', 'Transporter Rate')
+    ], string="Invoice Rate Source", default='customer')
     trucking_charge_billing_timing = fields.Selection([
         ('with_delivery', 'Bill with Main Delivery'),
         ('on_entry', 'Bill Immediately on Entry')
