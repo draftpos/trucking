@@ -34,7 +34,7 @@ class AccountMove(models.Model):
 
     def _compute_trucking_description(self):
         for move in self:
-            loads = move.trucking_load_ids
+            loads = move.trucking_load_ids or move.trucking_bill_load_ids
             if loads:
                 first_load = loads[0]
                 cargo = first_load.product_id.name or 'Cargo'
