@@ -2018,7 +2018,6 @@ class TruckingLoad(models.Model):
                         'memo': f"Fuel Advance - Load {rec.name}",
                         'date': fields.Date.context_today(self),
                         'load_id': rec.id,
-                        'is_fuel_payment': True,
                     })
                     payment.action_post()
                     rec.fuel_payment_id = payment.id

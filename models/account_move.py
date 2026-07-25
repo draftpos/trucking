@@ -28,13 +28,27 @@ class AccountMove(models.Model):
 
     trucking_load_ids = fields.One2many('trucking.load', 'invoice_id', string='Trucking Loads')
     trucking_bill_load_ids = fields.One2many('trucking.load', 'transporter_bill_id', string='Trucking Bill Loads')
+    all_trucking_load_ids = fields.Many2many('trucking.load', compute='_compute_all_trucking_load_ids', string='All Trucking Loads')
     pod = fields.Char(string='POD', compute='_compute_pod_details')
     pod_date = fields.Date(string='POD Date', compute='_compute_pod_details')
     trucking_description = fields.Char(string='Trucking Description', compute='_compute_trucking_description')
 
+    def _compute_all_trucking_load_ids(self):
+        for move in self:
+            loads = self.env['trucking.load'].browse()
+            if move.move_type in ('out_invoice', 'out_refund'):
+                orders = move.invoice_line_ids.mapped('sale_line_ids.order_id')
+                if orders:
+                    loads |= self.env['trucking.load'].search([('sale_order_id', 'in', orders.ids)])
+                loads |= self.env['trucking.load'].search([('invoice_id', '=', move.id)])
+                loads |= self.env['trucking.load'].search([('fuel_sales_invoice_id', '=', move.id)])
+            elif move.move_type in ('in_invoice', 'in_refund'):
+                loads |= self.env['trucking.load'].search([('transporter_bill_id', '=', move.id)])
+            move.all_trucking_load_ids = loads
+
     def _compute_trucking_description(self):
         for move in self:
-            loads = move.trucking_load_ids or move.trucking_bill_load_ids
+            loads = move.all_trucking_load_ids
             if loads:
                 first_load = loads[0]
                 cargo = first_load.product_id.name or 'Cargo'
@@ -49,7 +63,7 @@ class AccountMove(models.Model):
 
     def _compute_pod_details(self):
         for move in self:
-            load = move.trucking_load_ids[:1] or move.trucking_bill_load_ids[:1]
+            load = move.all_trucking_load_ids[:1] if move.all_trucking_load_ids else False
             if load:
                 move.pod = load.pod
                 move.pod_date = load.pod_date
