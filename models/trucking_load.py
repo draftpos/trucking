@@ -540,6 +540,7 @@ class TruckingLoad(models.Model):
                 continue
             if company.trucking_commission_calc_trigger == 'delivery' and rec.state not in ('delivered', 'invoiced'):
                 continue
+            # If trigger is 'any', we proceed regardless of state
                 
             journal_id = company.driver_commission_journal_id
             product_id = company.trucking_default_driver_commission_product_id

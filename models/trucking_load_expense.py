@@ -66,7 +66,9 @@ class TruckingLoadExpense(models.Model):
             hr_exp_sudo = hr_exp.sudo()
             if hasattr(hr_exp_sudo, 'action_submit'):
                 hr_exp_sudo.action_submit()
-            if hasattr(hr_exp_sudo, 'action_approve'):
+            if hasattr(hr_exp_sudo, '_do_approve'):
+                hr_exp_sudo._do_approve(False)
+            elif hasattr(hr_exp_sudo, 'action_approve'):
                 hr_exp_sudo.action_approve()
             if hasattr(hr_exp_sudo, 'action_post'):
                 hr_exp_sudo.action_post()

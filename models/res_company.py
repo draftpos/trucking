@@ -87,6 +87,7 @@ class ResCompany(models.Model):
 
     # Commission Timing
     trucking_commission_calc_trigger = fields.Selection([
+        ('any', 'Any State (Including Draft)'),
         ('delivery', 'Upon Delivery'),
         ('invoice', 'Upon Invoicing/Accounting')
     ], string="Commission Calculation Trigger", default='delivery')
