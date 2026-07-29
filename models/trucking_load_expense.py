@@ -17,6 +17,13 @@ class TruckingLoadExpense(models.Model):
         ('paid', 'Paid')
     ], string='Status', default='draft', readonly=True)
     
+    affect_commission = fields.Boolean(
+        string='Affects Driver Commission',
+        default=True,
+        help="If checked, this expense amount will be deducted from the driver commission base. "
+             "Uncheck to exclude this expense from the commission calculation."
+    )
+
     currency_id = fields.Many2one('res.currency', related='load_id.currency_id', readonly=True)
     company_id = fields.Many2one('res.company', related='load_id.company_id', readonly=True)
 

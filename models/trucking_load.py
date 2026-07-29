@@ -217,6 +217,20 @@ class TruckingLoad(models.Model):
         for rec in self:
             rec.total_expenses = sum(rec.expense_ids.mapped('amount'))
 
+    total_commission_expenses = fields.Monetary(
+        string='Total Commission-Affecting Expenses',
+        compute='_compute_total_commission_expenses',
+        store=True,
+        currency_field='currency_id'
+    )
+
+    @api.depends('expense_ids.amount', 'expense_ids.affect_commission')
+    def _compute_total_commission_expenses(self):
+        for rec in self:
+            rec.total_commission_expenses = sum(
+                exp.amount for exp in rec.expense_ids if exp.affect_commission
+            )
+
     @api.depends('total_expenses', 'total_commission', 'issued_fuel_cost')
     def _compute_total_all_expenses(self):
         for rec in self:
@@ -312,16 +326,16 @@ class TruckingLoad(models.Model):
             rec.total_demurrage = demurrage
             rec.total_penalty = penalty
 
-    @api.depends('commission_type', 'commission_percentage', 'gross_profit', 'penalty_amount')
+    @api.depends('commission_type', 'commission_percentage', 'total_commission_expenses', 'penalty_amount', 'invoiced_amount', 'issued_fuel_cost')
     def _compute_driver_commission_amount_dynamic(self):
         for rec in self:
             if rec.commission_type == 'percentage':
-                # Calculate profit BEFORE deducting the commission itself
+                # Only deduct expenses marked as 'affect_commission' from the commission base
                 if rec.transporter_type == 'in_house':
-                    base_profit = rec.invoiced_amount - rec.total_expenses - rec.issued_fuel_cost
+                    base_profit = rec.invoiced_amount - rec.total_commission_expenses - rec.issued_fuel_cost
                 else:
-                    base_profit = rec.invoiced_amount - rec.total_per_load - rec.total_expenses - rec.issued_fuel_cost
-                
+                    base_profit = rec.invoiced_amount - rec.total_per_load - rec.total_commission_expenses - rec.issued_fuel_cost
+
                 net = base_profit - rec.penalty_amount
                 if net > 0:
                     rec.driver_commission_amount = net * (rec.commission_percentage / 100.0)

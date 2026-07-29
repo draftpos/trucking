@@ -1,6 +1,6 @@
 {
     "name": "Trucking",
-    "version": "1.0",
+    "version": "1.1",
     "category": "Logistics",
     "summary": "Manage Trucking loads, transporters, customers, and billing",
     "author": "Havano",

@@ -329,6 +329,7 @@
                                     <field name="amount" optional="show" />
                                     <field name="doc_no" optional="show" />
                                     <field name="journal_id" optional="show" />
+                                    <field name="affect_commission" optional="show" string="Affects Commission" />
                                     <field name="state" optional="show" />
                                 </list>
                             </field>
