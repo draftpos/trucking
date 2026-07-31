@@ -5,6 +5,13 @@ class AccountPayment(models.Model):
 
     load_id = fields.Many2one('trucking.load', string='Order Number (Load)', domain="['|', ('transporter_id', '=', partner_id), ('customer_id', '=', partner_id)]")
 
+    @api.depends('journal_id', 'payment_type', 'payment_method_line_id')
+    def _compute_outstanding_account_id(self):
+        super()._compute_outstanding_account_id()
+        for pay in self:
+            if not pay.outstanding_account_id and pay.journal_id.default_account_id:
+                pay.outstanding_account_id = pay.journal_id.default_account_id
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:

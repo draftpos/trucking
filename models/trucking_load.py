@@ -870,6 +870,7 @@ class TruckingLoad(models.Model):
                     unreconciled_payment_residual = 0.0
                     for payment in supplier_payments:
                         if not payment.move_id:
+                            unreconciled_payment_residual += payment.amount
                             continue
                         pay_lines = payment.move_id.line_ids.filtered(
                             lambda l: l.account_id == payable_account and not l.reconciled
