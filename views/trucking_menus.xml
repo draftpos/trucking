@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <odoo>
     
-    <menuitem id="menu_trucking_root" name="Trucking" web_icon="trucking,static/description/icon.png" sequence="30" groups="base.group_no_one" />
+    <menuitem id="menu_trucking_root" name="Trucking" web_icon="trucking,static/description/icon.png" sequence="30" />
     <menuitem id="menu_trucking_accounting" name="Accounting" parent="menu_trucking_root" sequence="60" />
     <menuitem id="menu_trucking_reporting" name="Reporting" parent="menu_trucking_root" sequence="90" />
     <menuitem id="menu_trucking_config" name="Configurations" parent="menu_trucking_root" sequence="100" />
