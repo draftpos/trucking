@@ -1388,15 +1388,13 @@ class TruckingLoad(models.Model):
         for rec in self:
             if rec.state in ('draft', 'pending_approval', 'rejected'):
                 if rec.trucking_approval_workflow == 'combined':
-                    is_ok = rec.advance_approval_state in ('none', 'approved')
-                    is_approved = rec.advance_approval_state == 'approved'
+                    pending = rec.advance_approval_state == 'requested'
+                    has_answered = rec.advance_approval_state in ('approved', 'rejected')
                 else:
-                    fuel_ok = rec.fuel_approval_state in ('none', 'approved')
-                    deposit_ok = rec.deposit_approval_state in ('none', 'approved')
-                    is_ok = fuel_ok and deposit_ok
-                    is_approved = rec.fuel_approval_state == 'approved' or rec.deposit_approval_state == 'approved'
+                    pending = rec.fuel_approval_state == 'requested' or rec.deposit_approval_state == 'requested'
+                    has_answered = rec.fuel_approval_state in ('approved', 'rejected') or rec.deposit_approval_state in ('approved', 'rejected')
                 
-                if is_ok and is_approved:
+                if not pending and has_answered:
                     rec.action_confirm_load()
 
     def action_request_advance_approval(self):
