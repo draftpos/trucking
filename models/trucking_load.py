@@ -870,7 +870,10 @@ class TruckingLoad(models.Model):
                     unreconciled_payment_residual = 0.0
                     for payment in supplier_payments:
                         if not payment.move_id:
+<<<<<<< HEAD
                             unreconciled_payment_residual += payment.amount
+=======
+>>>>>>> 0f25944 (Sync latest changes from server)
                             continue
                         pay_lines = payment.move_id.line_ids.filtered(
                             lambda l: l.account_id == payable_account and not l.reconciled
@@ -1388,6 +1391,7 @@ class TruckingLoad(models.Model):
         for rec in self:
             if rec.state in ('draft', 'pending_approval', 'rejected'):
                 if rec.trucking_approval_workflow == 'combined':
+<<<<<<< HEAD
                     pending = rec.advance_approval_state == 'requested'
                     has_answered = rec.advance_approval_state in ('approved', 'rejected')
                 else:
@@ -1395,6 +1399,17 @@ class TruckingLoad(models.Model):
                     has_answered = rec.fuel_approval_state in ('approved', 'rejected') or rec.deposit_approval_state in ('approved', 'rejected')
                 
                 if not pending and has_answered:
+=======
+                    is_ok = rec.advance_approval_state in ('none', 'approved')
+                    is_approved = rec.advance_approval_state == 'approved'
+                else:
+                    fuel_ok = rec.fuel_approval_state in ('none', 'approved')
+                    deposit_ok = rec.deposit_approval_state in ('none', 'approved')
+                    is_ok = fuel_ok and deposit_ok
+                    is_approved = rec.fuel_approval_state == 'approved' or rec.deposit_approval_state == 'approved'
+                
+                if is_ok and is_approved:
+>>>>>>> 0f25944 (Sync latest changes from server)
                     rec.action_confirm_load()
 
     def action_request_advance_approval(self):
