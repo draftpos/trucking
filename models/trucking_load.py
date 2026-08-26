@@ -1421,7 +1421,8 @@ class TruckingLoad(models.Model):
             rec.advance_approval_state = 'approved'
             
             # Fuel Payment / Fuel Issue Logic
-            if rec.issued_fuel_qty > 0 and not rec.has_issued_fuel:
+            has_issued_fuel_request = rec.issued_fuel_qty > 0 or (rec.fuel_litres > 0 and rec.fuel_issue_price > 0)
+            if has_issued_fuel_request and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1911,7 +1912,8 @@ class TruckingLoad(models.Model):
                 from odoo.exceptions import AccessError
                 raise AccessError(_("You do not have permission to approve fuel."))
 
-            if rec.issued_fuel_qty > 0 and not rec.has_issued_fuel:
+            has_issued_fuel_request = rec.issued_fuel_qty > 0 or (rec.fuel_litres > 0 and rec.fuel_issue_price > 0)
+            if has_issued_fuel_request and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
