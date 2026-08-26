@@ -1421,7 +1421,7 @@ class TruckingLoad(models.Model):
             rec.advance_approval_state = 'approved'
             
             # Fuel Payment / Fuel Issue Logic
-            if rec.issued_fuel_supplier_id and not rec.has_issued_fuel:
+            if rec.issued_fuel_qty > 0 and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1448,6 +1448,10 @@ class TruckingLoad(models.Model):
                 cost_price = rec.fuel_unit_price
                 issue_price = rec.fuel_issue_price
                 supplier_to_use = rec.issued_fuel_supplier_id
+                if not supplier_to_use:
+                    supplier_to_use = self.env['res.partner'].sudo().search([('name', '=', 'Default Supplier')], limit=1)
+                    if not supplier_to_use:
+                        supplier_to_use = self.env['res.partner'].sudo().create({'name': 'Default Supplier', 'supplier_rank': 1})
                 
                 scrap = False
                 vendor_bill = False
@@ -1907,7 +1911,7 @@ class TruckingLoad(models.Model):
                 from odoo.exceptions import AccessError
                 raise AccessError(_("You do not have permission to approve fuel."))
 
-            if rec.issued_fuel_supplier_id and not rec.has_issued_fuel:
+            if rec.issued_fuel_qty > 0 and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1934,6 +1938,10 @@ class TruckingLoad(models.Model):
                 cost_price = rec.fuel_unit_price
                 issue_price = rec.fuel_issue_price
                 supplier_to_use = rec.issued_fuel_supplier_id
+                if not supplier_to_use:
+                    supplier_to_use = self.env['res.partner'].sudo().search([('name', '=', 'Default Supplier')], limit=1)
+                    if not supplier_to_use:
+                        supplier_to_use = self.env['res.partner'].sudo().create({'name': 'Default Supplier', 'supplier_rank': 1})
                 
                 scrap = False
                 vendor_bill = False
