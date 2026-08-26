@@ -2026,10 +2026,7 @@ class TruckingLoad(models.Model):
 
             else:
                 # Old Flow: Cash/Bank Advance
-                if not rec.journal_id:
-                    raise UserError(_("Please select a Cash/Bank Account (Journal) in the Payment Details section before approving fuel."))
-                
-                if rec.fuel_amount > 0 and not rec.fuel_payment_id:
+                if rec.fuel_amount > 0 and not rec.fuel_payment_id and rec.journal_id:
                     if not rec.transporter_id:
                         raise UserError(_("External transporter must be set on the load to approve a cash fuel advance."))
                     payment = self.env['account.payment'].create({
@@ -2044,8 +2041,7 @@ class TruckingLoad(models.Model):
                     })
                     payment.action_post()
                     rec.fuel_payment_id = payment.id
-
-                    rec.fuel_approval_state = 'approved'
+                rec.fuel_approval_state = 'approved'
             rec._check_auto_in_progress()
 
     def action_reject_fuel(self):
