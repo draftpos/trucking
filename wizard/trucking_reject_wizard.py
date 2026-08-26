@@ -31,6 +31,7 @@ class TruckingRejectWizard(models.TransientModel):
         elif self.reject_type == 'advance':
             load.advance_approval_state = 'rejected'
             load.advance_reject_reason = self.reason
+            load.state = 'rejected'
             load.message_post(body=f"<b>Advance Approval Rejected</b><br/>Reason: {self.reason}")
             load._check_auto_in_progress()
         elif self.reject_type in ('demurrage', 'penalty') and self.charge_id:

@@ -1,0 +1,46 @@
+--- addons/trucking/views/trucking_load_views.xml
++++ addons/trucking/views/trucking_load_views.xml
+@@ -236,4 +236,43 @@
+         <field name="state">code</field>
+         <field name="code">action = records.action_create_consolidated_invoice()</field>
+     </record>
++
++    <template id="report_invoice_document_trucking" inherit_id="account.report_invoice_document">
++        <xpath expr="//th[@name='th_description']/span" position="replace">
++            <span t-if="o.trucking_load_ids">Order No</span>
++            <span t-else="">Description</span>
++        </xpath>
++        
++        <xpath expr="//th[@name='th_description']" position="after">
++            <th name="th_route" class="text-start" t-if="o.trucking_load_ids"><span>Route</span></th>
++        </xpath>
++
++        <xpath expr="//th[@name='th_quantity']" position="attributes">
++            <attribute name="t-if">not o.trucking_load_ids</attribute>
++        </xpath>
++        
++        <xpath expr="//th[@name='th_priceunit']/span" position="replace">
++            <span t-if="o.trucking_load_ids">Rate</span>
++            <span t-else="">Unit Price</span>
++        </xpath>
++
++        <xpath expr="//td[@name='account_invoice_line_name']/span[@t-field='line.name']" position="replace">
++            <span t-if="o.trucking_load_ids" t-field="line.trucking_order_no" t-options="{'widget': 'text'}"/>
++            <span t-else="" t-field="line.name" t-options="{'widget': 'text'}"/>
++        </xpath>
++
++        <xpath expr="//td[@name='account_invoice_line_name']" position="after">
++            <td name="td_route" t-if="o.trucking_load_ids">
++                <span t-field="line.trucking_route_name"/>
++            </td>
++        </xpath>
++
++        <xpath expr="//td[@name='td_quantity']" position="attributes">
++            <attribute name="t-if">not o.trucking_load_ids</attribute>
++        </xpath>
++        
++        <xpath expr="//td[@name='td_taxes']" position="attributes">
++            <attribute name="t-if">not o.trucking_load_ids and display_taxes</attribute>
++        </xpath>
++    </template>
+ </odoo>
