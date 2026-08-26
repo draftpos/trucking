@@ -1907,8 +1907,6 @@ class TruckingLoad(models.Model):
                 from odoo.exceptions import AccessError
                 raise AccessError(_("You do not have permission to approve fuel."))
 
-            rec.fuel_approval_state = 'approved'
-            
             if rec.issued_fuel_supplier_id and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
@@ -1943,22 +1941,20 @@ class TruckingLoad(models.Model):
                 
                 if process == 'scrap':
                     stock_location = self.env['stock.warehouse'].search([('company_id', '=', company.id)], limit=1).lot_stock_id
-                    if stock_location:
-                        available_qty = product.with_context(location=stock_location.id).free_qty
-                        if qty > available_qty:
-                            raise ValidationError(_("Requested quantity (%(req)s) exceeds available stock (%(avail)s) for Fuel.", req=qty, avail=available_qty))
-                            
-                        scrap = self.env['stock.scrap'].create({
-                            'product_id': product.id,
-                            'product_uom_id': product.uom_id.id,
-                            'scrap_qty': qty,
-                            'location_id': stock_location.id,
-                            'origin': rec.name,
-                            'analytic_distribution': analytic_dist,
-                            'trucking_load_id': rec.id,
-                            'supplier_id': supplier_to_use.id,
-                        })
-                        scrap.action_validate()
+                    if not stock_location:
+                        raise UserError(_("No warehouse stock location is configured for this company."))
+
+                    scrap = self.env['stock.scrap'].create({
+                        'product_id': product.id,
+                        'product_uom_id': product.uom_id.id,
+                        'scrap_qty': qty,
+                        'location_id': stock_location.id,
+                        'origin': rec.name,
+                        'analytic_distribution': analytic_dist,
+                        'trucking_load_id': rec.id,
+                        'supplier_id': supplier_to_use.id,
+                    })
+                    scrap.action_validate()
                         
                 if process == 'bill':
                     vendor_bill = self.env['account.move'].create({
@@ -2038,6 +2034,7 @@ class TruckingLoad(models.Model):
                     payment.action_post()
                     rec.fuel_payment_id = payment.id
 
+                    rec.fuel_approval_state = 'approved'
             rec._check_auto_in_progress()
 
     def action_reject_fuel(self):
