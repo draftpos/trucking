@@ -1422,7 +1422,7 @@ class TruckingLoad(models.Model):
             
             # Fuel Payment / Fuel Issue Logic
             has_issued_fuel_request = rec.issued_fuel_qty > 0 or (rec.fuel_litres > 0 and rec.fuel_issue_price > 0)
-            if has_issued_fuel_request and not rec.has_issued_fuel:
+            if (rec.transporter_type == 'in_house' or has_issued_fuel_request) and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1445,9 +1445,11 @@ class TruckingLoad(models.Model):
                         self.env['stock.quant']._update_available_quantity(product, stock_location, 1000.0)
 
                 analytic_dist = rec._get_load_analytic_distribution() or {}
-                qty = rec.fuel_litres
+                qty = rec.issued_fuel_qty or rec.fuel_litres
                 cost_price = rec.fuel_unit_price
                 issue_price = rec.fuel_issue_price
+                if qty <= 0:
+                    raise UserError(_("Please use the 'Issue Fuel' wizard to set the fuel quantity before approving."))
                 supplier_to_use = rec.issued_fuel_supplier_id
                 if not supplier_to_use:
                     supplier_to_use = self.env['res.partner'].sudo().search([('name', '=', 'Default Supplier')], limit=1)
@@ -1913,7 +1915,7 @@ class TruckingLoad(models.Model):
                 raise AccessError(_("You do not have permission to approve fuel."))
 
             has_issued_fuel_request = rec.issued_fuel_qty > 0 or (rec.fuel_litres > 0 and rec.fuel_issue_price > 0)
-            if has_issued_fuel_request and not rec.has_issued_fuel:
+            if (rec.transporter_type == 'in_house' or has_issued_fuel_request) and not rec.has_issued_fuel:
                 # New Flow: Supplier Fuel Issued
                 company = self.env.company
                 process = company.trucking_in_house_fuel_process if rec.transporter_type == 'in_house' else company.trucking_external_fuel_process
@@ -1936,9 +1938,11 @@ class TruckingLoad(models.Model):
                         self.env['stock.quant']._update_available_quantity(product, stock_location, 1000.0)
 
                 analytic_dist = rec._get_load_analytic_distribution() or {}
-                qty = rec.fuel_litres
+                qty = rec.issued_fuel_qty or rec.fuel_litres
                 cost_price = rec.fuel_unit_price
                 issue_price = rec.fuel_issue_price
+                if qty <= 0:
+                    raise UserError(_("Please use the 'Issue Fuel' wizard to set the fuel quantity before approving."))
                 supplier_to_use = rec.issued_fuel_supplier_id
                 if not supplier_to_use:
                     supplier_to_use = self.env['res.partner'].sudo().search([('name', '=', 'Default Supplier')], limit=1)
@@ -2022,9 +2026,6 @@ class TruckingLoad(models.Model):
 
             else:
                 # Old Flow: Cash/Bank Advance
-                if rec.transporter_type == 'in_house':
-                    raise UserError(_("In-house loads cannot have a cash fuel advance. Please use the 'Issue Fuel' wizard to select a supplier or scrap fuel."))
-                
                 if not rec.journal_id:
                     raise UserError(_("Please select a Cash/Bank Account (Journal) in the Payment Details section before approving fuel."))
                 
