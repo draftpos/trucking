@@ -192,7 +192,7 @@
                                         <field name="advance_reject_reason" invisible="trucking_approval_workflow == 'separate' or advance_approval_state != 'rejected'" />
 
                                         <field name="balance" widget="monetary" />
-                                        <field name="journal_id" required="state == 'pending_approval' and transporter_type != 'in_house'" />
+                                        <field name="journal_id" />
                                     </group>
                                 </div>
                                 
