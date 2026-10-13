@@ -1,9 +1,12 @@
 {
-    "name": "Trucking",
-    "version": "1.1",
-    "category": "Logistics",
-    "summary": "Manage Trucking loads, transporters, customers, and billing",
-    "author": "Havano",
+    "name": "Trucking & Fleet Logistics",
+    "version": "1.2",
+    "category": "Operations/Logistics",
+    "summary": "Manage Trucking loads, fleet & trailers, border clearances, fuel advances, and customer billing",
+    "author": "DraftPOS / Havano Solutions",
+    "website": "https://draftpos.com",
+    "license": "LGPL-3",
+    "images": ["static/description/icon.png"],
     "depends": ["base", "web", "sale_management", "purchase", "account", "stock", "hr_expense", "scrap_analytic_automation"],
     "data": [
         "security/trucking_security.xml",
