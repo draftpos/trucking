@@ -64,8 +64,53 @@ class ResPartner(models.Model):
             loads_as_customer = self.env['trucking.load'].search([('customer_id', '=', partner.id)])
             
             partner.total_transporter_balance = sum(loads_as_transporter.mapped('transporter_balance'))
-            partner.total_customer_balance = sum(loads_as_customer.mapped('customer_balance'))
+            
+            # Deduct unallocated customer credits on receivable account (e.g. bank payments not yet matched to specific loads)
+            unallocated_credits = self.env['account.move.line'].search([
+                ('partner_id', '=', partner.id),
+                ('account_id.account_type', '=', 'asset_receivable'),
+                ('parent_state', '=', 'posted'),
+                ('credit', '>', 0),
+                ('reconciled', '=', False)
+            ])
+            unallocated_credit_sum = sum(abs(l.amount_residual) for l in unallocated_credits if not l.payment_id.load_id)
+            
+            load_customer_bal = sum(loads_as_customer.mapped('customer_balance'))
+            partner.total_customer_balance = max(0.0, load_customer_bal - unallocated_credit_sum)
             partner.total_overdue_pods = len(loads_as_transporter.filtered(lambda l: l.state == 'overdue')) + len(loads_as_customer.filtered(lambda l: l.state == 'overdue'))
+
+    def action_auto_reconcile_customer_payments(self):
+        """Auto-reconciles open customer credit items (e.g. bank payments) with open customer invoices (FIFO)."""
+        for partner in self:
+            unrec_credits = self.env['account.move.line'].search([
+                ('partner_id', '=', partner.id),
+                ('account_id.account_type', '=', 'asset_receivable'),
+                ('parent_state', '=', 'posted'),
+                ('credit', '>', 0),
+                ('reconciled', '=', False)
+            ], order='date asc, id asc')
+
+            unrec_debits = self.env['account.move.line'].search([
+                ('partner_id', '=', partner.id),
+                ('account_id.account_type', '=', 'asset_receivable'),
+                ('parent_state', '=', 'posted'),
+                ('debit', '>', 0),
+                ('reconciled', '=', False)
+            ], order='date asc, id asc')
+
+            for credit_line in unrec_credits:
+                if credit_line.reconciled or abs(credit_line.amount_residual) < 0.001:
+                    continue
+                for debit_line in unrec_debits:
+                    if debit_line.reconciled or debit_line.amount_residual < 0.001:
+                        continue
+                    try:
+                        (credit_line | debit_line).reconcile()
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).error(f"Reconciliation error for {partner.name}: {e}")
+                    if credit_line.reconciled:
+                        break
 
     def _compute_load_stats(self):
         today = fields.Date.context_today(self)

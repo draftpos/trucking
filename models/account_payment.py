@@ -73,19 +73,24 @@ class AccountPayment(models.Model):
                                 logging.getLogger(__name__).error(f"Reconciliation error: {e}")
                             pass
                             
-            if rec.partner_type == 'customer' and rec.load_id.invoice_id and rec.load_id.invoice_id.state == 'posted':
-                invoice = rec.load_id.invoice_id
-                receivable_account = invoice.line_ids.filtered(lambda l: l.account_id.account_type == 'asset_receivable')
-                if receivable_account:
-                    receivable_account = receivable_account[0].account_id
-                    payment_lines = rec.move_id.line_ids.filtered(lambda l: l.account_id == receivable_account and not l.reconciled)
-                    for line in payment_lines:
-                        inv_lines = invoice.line_ids.filtered(lambda l: l.account_id == receivable_account and not l.reconciled)
-                        if inv_lines:
-                            try:
-                                (inv_lines[0] | line).reconcile()
-                            except Exception as e:
-                                import logging
-                                logging.getLogger(__name__).error(f"Reconciliation error: {e}")
-                            pass
+            if rec.partner_type == 'customer' and rec.load_id:
+                load = rec.load_id
+                invoices = (load.invoice_id | (load.sale_order_id.invoice_ids if load.sale_order_id else self.env['account.move'])).filtered(
+                    lambda i: i.state == 'posted' and i.move_type == 'out_invoice' and i.amount_residual > 0
+                )
+                if invoices and rec.move_id:
+                    receivable_account = invoices.line_ids.filtered(lambda l: l.account_id.account_type == 'asset_receivable')
+                    if receivable_account:
+                        receivable_account = receivable_account[0].account_id
+                        payment_lines = rec.move_id.line_ids.filtered(lambda l: l.account_id == receivable_account and not l.reconciled)
+                        for line in payment_lines:
+                            for inv in invoices:
+                                inv_lines = inv.line_ids.filtered(lambda l: l.account_id == receivable_account and not l.reconciled)
+                                if inv_lines and not line.reconciled:
+                                    try:
+                                        (inv_lines[0] | line).reconcile()
+                                    except Exception as e:
+                                        import logging
+                                        logging.getLogger(__name__).error(f"Reconciliation error: {e}")
+                                    pass
         return res
