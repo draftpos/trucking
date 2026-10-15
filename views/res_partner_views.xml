@@ -7,6 +7,7 @@
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="before">
                 <header>
+                    <button name="action_auto_reconcile_customer_payments" type="object" string="Auto-Reconcile Payments" class="btn-primary" invisible="not is_customer and contact_type != 'customer'"/>
                     <button name="action_blacklist_transporter" type="object" string="Blacklist Transporter" class="btn-danger" invisible="not is_supplier or is_blacklisted_transporter" confirm="Are you sure you want to blacklist this supplier? They won't be eligible for Truckloads."/>
                     <button name="action_unblacklist_transporter" type="object" string="Un-Blacklist Transporter" class="btn-secondary" invisible="not is_blacklisted_transporter"/>
                 </header>

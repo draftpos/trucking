@@ -894,51 +894,83 @@ class TruckingLoad(models.Model):
                 
             rec.transporter_balance = balance
 
-    @api.depends('sale_order_id.invoice_ids.state', 'sale_order_id.invoice_ids.amount_total', 'sale_order_id.invoice_ids.amount_residual', 'sale_order_id.invoice_ids.payment_state', 'payment_ids.state', 'payment_ids.amount', 'qty_tonnes', 'customer_rate', 'bill_customer_qty', 'delivered_qty', 'transporter_type')
+    @api.depends(
+        'sale_order_id.invoice_ids.state',
+        'sale_order_id.invoice_ids.amount_total',
+        'sale_order_id.invoice_ids.amount_residual',
+        'sale_order_id.invoice_ids.payment_state',
+        'sale_order_id.invoice_ids.move_type',
+        'invoice_id.state',
+        'invoice_id.amount_total',
+        'invoice_id.amount_residual',
+        'invoice_id.payment_state',
+        'invoice_id.move_type',
+        'payment_ids.state',
+        'payment_ids.amount',
+        'payment_ids.move_id',
+        'qty_tonnes',
+        'customer_rate',
+        'bill_customer_qty',
+        'delivered_qty',
+        'transporter_type'
+    )
     def _compute_invoiced_amount(self):
         for rec in self:
             domain = [('load_id', '=', rec.id), ('partner_type', '=', 'customer'), ('state', '!=', 'draft')]
             manual_payments = self.env['account.payment'].search(domain)
             manual_paid = sum(manual_payments.mapped('amount'))
-            
+
             if rec.transporter_type == 'in_house':
                 so_qty = rec.qty_tonnes
             else:
                 so_qty = rec.qty_tonnes if rec.bill_customer_qty == 'loaded' else rec.delivered_qty
-                
+
             rec.invoiced_amount = so_qty * rec.customer_rate
-            
+
+            # Gather all invoices tied to this load (both direct invoice_id and sale_order_id invoices)
+            all_moves = self.env['account.move'].browse()
+            if rec.invoice_id:
+                all_moves |= rec.invoice_id
             if rec.sale_order_id:
-                # Only count real invoices (out_invoice), NOT credit notes (out_refund)
-                # Credit notes (RINV) are auto-created by Odoo for deposit deductions
-                # and should not factor into the balance calculation
-                all_moves = rec.sale_order_id.invoice_ids.filtered(lambda i: i.state == 'posted')
-                invoices = all_moves.filtered(lambda i: i.move_type == 'out_invoice')
-                credit_notes = all_moves.filtered(lambda i: i.move_type == 'out_refund')
-                
-                # Remaining balance on invoices (includes taxes)
-                residual_invoices = sum(invoices.mapped('amount_residual'))
-                residual_credits = sum(credit_notes.mapped('amount_residual'))
-                residual_so = residual_invoices - residual_credits
-                
-                # Actual amount paid on invoices (includes taxes)
-                paid_invoices = sum(invoices.mapped('amount_total')) - residual_invoices
-                paid_credits = sum(credit_notes.mapped('amount_total')) - residual_credits
-                paid_so = paid_invoices - paid_credits
-                
-                # Untaxed amount invoiced (used to find how much is left to invoice)
-                invoiced_untaxed = sum(invoices.mapped('amount_untaxed')) - sum(credit_notes.mapped('amount_untaxed'))
-                uninvoiced_amount = rec.invoiced_amount - invoiced_untaxed
-                if uninvoiced_amount < 0:
-                    uninvoiced_amount = 0
-                
-                # We do NOT add manual_paid here because any manual payment properly registered
-                # is already linked to the invoices, so its value is reflected in paid_invoices.
-                rec.paid = paid_so
-                rec.customer_balance = uninvoiced_amount + residual_so
+                all_moves |= rec.sale_order_id.invoice_ids
+
+            posted_moves = all_moves.filtered(lambda i: i.state == 'posted')
+            out_invoices = posted_moves.filtered(lambda i: i.move_type == 'out_invoice')
+            credit_notes = posted_moves.filtered(lambda i: i.move_type == 'out_refund')
+
+            if out_invoices:
+                # Active invoices: exclude invoices that are fully reversed with 0 residual
+                active_invoices = out_invoices.filtered(lambda i: i.payment_state != 'reversed' or i.amount_residual > 0)
+                active_credits = credit_notes.filtered(lambda i: i.amount_residual > 0)
+
+                residual_invoices = sum(active_invoices.mapped('amount_residual'))
+                residual_credits = sum(active_credits.mapped('amount_residual'))
+                residual_due = max(0.0, residual_invoices - residual_credits)
+
+                total_billed = sum(active_invoices.mapped('amount_total'))
+                paid_amount = max(0.0, total_billed - residual_due)
+
+                # Deduct unreconciled customer payments linked to this load
+                unreconciled_payment_residual = 0.0
+                for payment in manual_payments:
+                    if not payment.move_id:
+                        unreconciled_payment_residual += payment.amount
+                        continue
+                    pay_lines = payment.move_id.line_ids.filtered(
+                        lambda l: l.account_id.account_type == 'asset_receivable' and not l.reconciled
+                    )
+                    unreconciled_payment_residual += sum(abs(p.amount_residual) for p in pay_lines)
+
+                final_balance = max(0.0, residual_due - unreconciled_payment_residual)
+                if not active_invoices:
+                    final_balance = 0.0
+                    paid_amount = 0.0
+
+                rec.paid = paid_amount + (manual_paid if not active_invoices else 0.0)
+                rec.customer_balance = final_balance
             else:
                 rec.paid = manual_paid
-                rec.customer_balance = rec.invoiced_amount - rec.paid
+                rec.customer_balance = max(0.0, rec.invoiced_amount - manual_paid)
 
     def _compute_display_total(self):
         for rec in self:

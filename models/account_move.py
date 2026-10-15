@@ -75,12 +75,16 @@ class AccountMove(models.Model):
         super()._compute_payments_widget_to_reconcile_info()
         for move in self:
             if move.invoice_outstanding_credits_debits_widget:
-                load = self.env['trucking.load'].search([
-                    '|', ('transporter_bill_id', '=', move.id),
-                         ('invoice_id', '=', move.id)
-                ], limit=1)
+                loads = move.all_trucking_load_ids
+                if not loads:
+                    loads = self.env['trucking.load'].search([
+                        '|', '|',
+                        ('transporter_bill_id', '=', move.id),
+                        ('invoice_id', '=', move.id),
+                        ('sale_order_id.invoice_ids', 'in', move.ids)
+                    ])
 
-                if load:
+                if loads:
                     vals = move.invoice_outstanding_credits_debits_widget
                     if isinstance(vals, dict) and 'content' in vals:
                         filtered_content = []
@@ -88,19 +92,16 @@ class AccountMove(models.Model):
                             payment_id = item.get('account_payment_id')
                             if payment_id:
                                 payment = self.env['account.payment'].browse(payment_id)
-                                if payment.load_id.id == load.id:
+                                if payment.load_id and payment.load_id in loads:
                                     filtered_content.append(item)
                             else:
                                 line_id = item.get('id')
                                 if line_id:
                                     move_line = self.env['account.move.line'].browse(line_id)
-                                    other_load = self.env['trucking.load'].search([
-                                        '|', ('transporter_bill_id', '=', move_line.move_id.id),
-                                             ('invoice_id', '=', move_line.move_id.id)
-                                    ], limit=1)
-                                    if other_load and other_load.id == load.id:
+                                    other_loads = move_line.move_id.all_trucking_load_ids
+                                    if other_loads and any(l in loads for l in other_loads):
                                         filtered_content.append(item)
-                                    elif not other_load:
+                                    elif not other_loads:
                                         # If it's a credit note not tied to any load, exclude it.
                                         pass
                         

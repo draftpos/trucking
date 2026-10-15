@@ -11,8 +11,10 @@ class AccountPaymentRegister(models.TransientModel):
         
         if moves:
             load = self.env['trucking.load'].search([
-                '|', ('transporter_bill_id', 'in', moves.ids),
-                     ('invoice_id', 'in', moves.ids)
+                '|', '|',
+                ('transporter_bill_id', 'in', moves.ids),
+                ('invoice_id', 'in', moves.ids),
+                ('sale_order_id.invoice_ids', 'in', moves.ids)
             ], limit=1)
             
             if load:
