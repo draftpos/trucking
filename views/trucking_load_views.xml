@@ -17,6 +17,7 @@
                 <field name="transporter_balance_display" optional="show" />
                 <field name="customer_balance" optional="show" />
                 <field name="gross_profit" optional="show" />
+                <field name="fuel_approval_state" string="Fuel Status" widget="badge" decoration-info="fuel_approval_state == 'requested'" decoration-success="fuel_approval_state == 'approved'" decoration-danger="fuel_approval_state == 'rejected'" optional="show" />
                 <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-primary="state == 'upcoming'" decoration-warning="state == 'in_progress'" decoration-success="state in ('delivered', 'invoiced')" optional="show" />
             </list>
         </field>
@@ -267,6 +268,8 @@
                                         <field name="penalty_amount" invisible="transporter_type != 'in_house' or not trucking_enable_driver_penalties" />
                                         <field name="penalty_reason" invisible="penalty_amount == 0 or not trucking_enable_driver_penalties" />
                                         <field name="driver_commission_amount" widget="monetary" readonly="state in ('delivered', 'invoiced')" invisible="transporter_type != 'in_house'" />
+                                        <field name="fuel_litres" string="Fuel (Litres)" invisible="not fuel_litres and not has_issued_fuel" readonly="1" />
+                                        <field name="fuel_cost_amount" string="Fuel Cost Amount" widget="monetary" invisible="not fuel_cost_amount and not has_issued_fuel" readonly="1" />
                                         <field name="fuel_vendor_bill_id" invisible="not fuel_vendor_bill_id" />
                                         <field name="fuel_sales_invoice_id" invisible="not fuel_sales_invoice_id" />
                                         <div class="d-flex align-items-center mt-2" style="gap: 10px;">

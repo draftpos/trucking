@@ -1896,6 +1896,8 @@ class TruckingLoad(models.Model):
             rec.fuel_unit_price = 0.0
             rec.fuel_amount = 0.0
             rec.fuel_issue_price = 0.0
+            rec.fuel_approval_state = 'none'
+            rec.fuel_banner_text = 'Fuel Reversed'
             
             if not is_adjust:
                 rec.message_post(body="Issued Fuel has been reversed.")
@@ -2073,7 +2075,8 @@ class TruckingLoad(models.Model):
                     })
                     payment.action_post()
                     rec.fuel_payment_id = payment.id
-                rec.fuel_approval_state = 'approved'
+            rec.fuel_approval_state = 'approved'
+            rec.fuel_banner_text = 'Fuel Approved'
             rec._check_auto_in_progress()
 
     def action_reject_fuel(self):
