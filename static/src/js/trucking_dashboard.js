@@ -2,7 +2,7 @@
 
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { Component, onWillStart, onMounted, useState, useRef, onPatched } from "@odoo/owl";
+import { Component, onWillStart, onMounted, onWillDestroy, useState, useRef, onPatched } from "@odoo/owl";
 
 function loadScript(url) {
     return new Promise((resolve, reject) => {
@@ -25,6 +25,7 @@ export class TruckingDashboard extends Component {
         this.lineChartRef = useRef("lineChart");
         this.donutChartRef = useRef("donutChart");
         this.charts = {};
+        this.isDestroyed = false;
 
         this.state = useState({
             dateFilter: 'month',
@@ -53,21 +54,41 @@ export class TruckingDashboard extends Component {
 
         onWillStart(async () => {
             await loadScript("https://cdn.jsdelivr.net/npm/chart.js");
-            await this.fetchData();
+            if (!this.isDestroyed) {
+                await this.fetchData();
+            }
         });
 
         onMounted(() => {
-            this.renderCharts();
+            if (!this.isDestroyed) {
+                this.renderCharts();
+            }
+        });
+
+        onWillDestroy(() => {
+            this.isDestroyed = true;
+            if (this.charts.lineChart) {
+                try { this.charts.lineChart.destroy(); } catch (e) {}
+            }
+            if (this.charts.donutChart) {
+                try { this.charts.donutChart.destroy(); } catch (e) {}
+            }
         });
     }
 
     async fetchData() {
+        if (this.isDestroyed) return;
         const result = await this.orm.call("trucking.load", "get_dashboard_data", [this.state.dateFilter]);
+        if (this.isDestroyed) return;
         if (result) {
             Object.assign(this.state, result);
             this.state.calendarIndex = 0;
             this.updateCalendar();
-            setTimeout(() => this.renderCharts(), 0);
+            setTimeout(() => {
+                if (!this.isDestroyed) {
+                    this.renderCharts();
+                }
+            }, 0);
         }
     }
 
